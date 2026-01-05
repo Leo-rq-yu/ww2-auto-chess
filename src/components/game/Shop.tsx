@@ -1,119 +1,127 @@
-import { useGameStore } from '../../store/gameStore'
-import { UNIT_DEFINITIONS, UnitType } from '../../types/units'
-import { generateShopCards } from '../../engine/shop'
-import { generateRandomTrait } from '../../engine/merge'
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ShopState, ShopCard as ShopCardType } from '../../types';
+import { UnitCard } from './UnitCard';
+import { UnitDetailCard } from './UnitDetailCard';
+import { Button } from '../ui/Button';
+import { RefreshCw, Lock, Unlock, Coins } from 'lucide-react';
 
-export default function Shop() {
-  const {
-    shopCards,
-    setShopCards,
-    currentPlayer,
-    benchState,
-    addUnitToBench,
-    setBenchState,
-  } = useGameStore()
+interface ShopProps {
+  shop: ShopState;
+  playerMoney: number;
+  onBuyCard: (index: number) => void;
+  onRefresh: () => void;
+  isLocked?: boolean;
+  onToggleLock?: () => void;
+}
 
-  const handleBuy = async (index: number) => {
-    if (!currentPlayer || !shopCards[index]) return
-
-    const card = shopCards[index]
-    if (currentPlayer.money < card.cost) {
-      alert('Not enough gold')
-      return
-    }
-
-    // Create unit
-    const def = UNIT_DEFINITIONS[card.unitType as UnitType]
-    const trait = generateRandomTrait(card.unitType as UnitType)
-
-    const unit = {
-      id: `unit_${Date.now()}_${Math.random()}`,
-      type: card.unitType as UnitType,
-      starLevel: 1,
-      hp: def.baseHp,
-      maxHp: def.baseHp,
-      attack: [...def.baseAttack] as [number, number],
-      armor: def.baseArmor,
-      attackType: def.attackType,
-      range: def.range,
-      speed: def.speed,
-      traits: trait ? [trait] : [],
-    }
-
-    // Check if can merge
-    const sameUnits = benchState.pieces.filter(
-      u => u.type === unit.type && u.starLevel === unit.starLevel
-    )
-
-    if (sameUnits.length >= 2) {
-      // Can merge
-      const { mergeUnits } = await import('../../engine/merge')
-      const toMerge = [...sameUnits.slice(0, 2), unit]
-      const merged = mergeUnits(toMerge)
-      const remaining = benchState.pieces.filter(
-        u => !toMerge.slice(0, 2).some(m => m.id === u.id)
-      )
-      setBenchState({
-        pieces: [...remaining, merged],
-      })
-    } else {
-      addUnitToBench(unit)
-    }
-
-    // Update gold (should update database via service)
-    // TODO: Update gold in database
-
-    // Remove purchased card
-    const newCards = [...shopCards]
-    newCards.splice(index, 1)
-    setShopCards(newCards)
-  }
-
-  const handleRefresh = () => {
-    if (!currentPlayer || currentPlayer.money < 2) {
-      alert('Not enough gold (refresh costs 2 gold)')
-      return
-    }
-
-    const newCards = generateShopCards(currentPlayer.level, 5)
-    setShopCards(newCards)
-    // TODO: Update gold in database
-  }
+export function Shop({
+  shop,
+  playerMoney,
+  onBuyCard,
+  onRefresh,
+  isLocked = false,
+  onToggleLock,
+}: ShopProps) {
+  const canRefresh = playerMoney >= shop.refreshCost && !isLocked;
+  const [hoveredCard, setHoveredCard] = useState<ShopCardType | null>(null);
 
   return (
-    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-white text-xl font-semibold">Shop</h2>
-        <button
-          onClick={handleRefresh}
-          className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
+    <div className="w-[356px] bg-stone-800/80 rounded-xl border-2 border-stone-700">
+      {/* Header */}
+      <div className="flex items-center justify-between p-3 border-b border-stone-700">
+        <div className="flex items-center gap-3">
+          <h3 className="text-amber-400 font-bold text-lg">Shop</h3>
+          
+          {/* Lock Button */}
+          <button
+            onClick={onToggleLock}
+            className={`
+              p-1.5 rounded-lg transition-all duration-200
+              ${isLocked 
+                ? 'bg-amber-500/30 text-amber-400 ring-2 ring-amber-500/50' 
+                : 'bg-stone-700 text-stone-400 hover:text-stone-200 hover:bg-stone-600'
+              }
+            `}
+            title={isLocked ? 'Unlock Shop (cards will refresh next round)' : 'Lock Shop (keep these cards)'}
+          >
+            {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
+          </button>
+          
+          {isLocked && (
+            <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+              Locked
+            </span>
+          )}
+        </div>
+
+        {/* Refresh Button */}
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRefresh}
+          disabled={!canRefresh}
+          className="flex items-center gap-2"
         >
-          Refresh (2 gold)
-        </button>
+          <RefreshCw size={14} className={isLocked ? 'opacity-50' : ''} />
+          <span>Refresh</span>
+          <span className="flex items-center gap-0.5 text-amber-400">
+            <Coins size={12} />
+            {shop.refreshCost}
+          </span>
+        </Button>
       </div>
 
-      <div className="grid grid-cols-5 gap-2">
-        {shopCards.map((card, idx) => {
-          const def = UNIT_DEFINITIONS[card.unitType as UnitType]
-          return (
-            <div
-              key={idx}
-              className="bg-gray-800 border-2 border-gray-600 rounded p-2 cursor-pointer hover:border-blue-400"
-              onClick={() => handleBuy(idx)}
-            >
-              <img
-                src={def.image}
-                alt={def.name}
-                className="w-full aspect-square object-contain mb-2"
-              />
-              <div className="text-white text-xs text-center">
-                <div className="font-semibold">{def.name}</div>
-                <div className="text-yellow-400">{card.cost} gold</div>
-              </div>
-            </div>
-          )
-        })}
+      {/* Cards - 2 rows of cards */}
+      <div className="p-3">
+        <div className="grid grid-cols-3 gap-2">
+          <AnimatePresence mode="popLayout">
+            {shop.cards.slice(0, 6).map((card, index) => (
+              <motion.div
+                key={`${card.typeId}-${index}`}
+                initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ 
+                  type: 'spring', 
+                  stiffness: 400, 
+                  damping: 25,
+                  delay: index * 0.03 
+                }}
+                onMouseEnter={() => !card.purchased && setHoveredCard(card)}
+                onMouseLeave={() => setHoveredCard(null)}
+              >
+                {card.purchased ? (
+                  <div className="aspect-[3/4] rounded-lg border-2 border-dashed border-stone-600 bg-stone-900/50 flex items-center justify-center">
+                    <span className="text-stone-600 text-xs">Sold</span>
+                  </div>
+                ) : (
+                  <UnitCard
+                    shopCard={card}
+                    showPrice
+                    disabled={playerMoney < card.cost}
+                    onClick={() => onBuyCard(index)}
+                    size="md"
+                  />
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
       </div>
+
+      {/* Hint */}
+      <div className="px-3 pb-3 text-center text-stone-500 text-xs">
+        Click to buy · Hover for details · Press D to sell
+      </div>
+
+      {/* Unit Detail Card - Shows on hover */}
+      <UnitDetailCard 
+        shopCard={hoveredCard} 
+        visible={!!hoveredCard}
+      />
     </div>
-  )
+  );
 }
+
+export default Shop;

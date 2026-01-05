@@ -1,51 +1,91 @@
-import { useGameStore } from '../../store/gameStore'
-import { setPlayerReady } from '../../services/matchService'
+import { motion } from 'motion/react';
+import { Swords, Settings, CheckCircle } from 'lucide-react';
+import { GamePhase } from '../../types';
 
-export default function PhaseTimer() {
-  const { match, phase, isReady, currentPlayer, setIsReady } = useGameStore()
+interface PhaseTimerProps {
+  phase: GamePhase;
+  turnNumber: number;
+  isReady: boolean;
+  onReady: () => void;
+}
 
-  const handleReady = async () => {
-    if (!match || !currentPlayer) return
+const phaseConfig = {
+  preparation: {
+    icon: Settings,
+    label: 'Preparation',
+    color: 'text-amber-400',
+    bgColor: 'bg-amber-500/20',
+    borderColor: 'border-amber-500',
+  },
+  battle: {
+    icon: Swords,
+    label: 'Battle',
+    color: 'text-red-400',
+    bgColor: 'bg-red-500/20',
+    borderColor: 'border-red-500',
+  },
+  settlement: {
+    icon: CheckCircle,
+    label: 'Settlement',
+    color: 'text-emerald-400',
+    bgColor: 'bg-emerald-500/20',
+    borderColor: 'border-emerald-500',
+  },
+};
 
-    try {
-      await setPlayerReady(match.matchId, currentPlayer.playerId, true)
-      setIsReady(true)
-    } catch (error) {
-      console.error('Failed to set ready:', error)
-    }
-  }
-
-  const phaseNames: Record<string, string> = {
-    preparation: 'Preparation Phase',
-    battle: 'Battle Phase',
-    settlement: 'Settlement Phase',
-  }
+export function PhaseTimer({ phase, turnNumber, isReady, onReady }: PhaseTimerProps) {
+  const config = phaseConfig[phase];
+  const Icon = config.icon;
 
   return (
-    <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4">
-      <div className="text-white text-center mb-4">
-        <div className="text-2xl font-bold">{phaseNames[phase] || phase}</div>
-        {match && (
-          <div className="text-sm text-gray-300 mt-1">
-            Turn {match.turnNumber}
-          </div>
-        )}
+    <div className={`
+      flex items-center gap-4 px-6 py-3 rounded-xl border-2
+      ${config.bgColor} ${config.borderColor}
+      transition-all duration-300
+    `}>
+      {/* Phase Icon */}
+      <div className={`p-2 rounded-lg ${config.bgColor}`}>
+        <Icon size={24} className={config.color} />
       </div>
 
-      {phase === 'preparation' && !isReady && (
-        <button
-          onClick={handleReady}
-          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
-        >
-          Ready
-        </button>
-      )}
-
-      {isReady && (
-        <div className="text-center text-green-400 font-semibold">
-          Ready
+      {/* Phase Info */}
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className={`font-bold ${config.color}`}>
+            {config.label}
+          </span>
+          <span className="text-stone-400 text-sm">
+            Turn {turnNumber}
+          </span>
         </div>
+      </div>
+
+      {/* Ready Button (only in preparation) */}
+      {phase === 'preparation' && (
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onReady}
+          className={`
+            px-6 py-2 rounded-lg font-bold transition-all duration-200
+            ${isReady 
+              ? 'bg-green-500 text-white shadow-lg shadow-green-500/30' 
+              : 'bg-stone-700 text-stone-200 hover:bg-stone-600'
+            }
+          `}
+        >
+          {isReady ? (
+            <span className="flex items-center gap-2">
+              <CheckCircle size={16} />
+              Ready
+            </span>
+          ) : (
+            'Ready'
+          )}
+        </motion.button>
       )}
     </div>
-  )
+  );
 }
+
+export default PhaseTimer;

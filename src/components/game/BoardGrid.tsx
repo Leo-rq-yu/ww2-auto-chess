@@ -1,81 +1,147 @@
-import { useState } from 'react'
-import { useGameStore } from '../../store/gameStore'
-import { BOARD_WIDTH, BOARD_HEIGHT } from '../../engine/board'
-import { UNIT_DEFINITIONS } from '../../types/units'
+import { useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { BoardState, Position, Piece, BOARD_WIDTH, BOARD_HEIGHT } from '../../types';
+import { UnitCard } from './UnitCard';
+import { positionToKey } from '../../engine/board';
 
-export default function BoardGrid() {
-  const { boardState, removeUnitFromBoard, placeUnitOnBoard } = useGameStore()
-  const [selectedUnit, setSelectedUnit] = useState<string | null>(null)
+interface BoardGridProps {
+  board: BoardState;
+  playerId: string;
+  selectedPieceId: string | null;
+  onTileClick: (position: Position) => void;
+  onPieceClick: (pieceId: string) => void;
+  onPieceRightClick?: (pieceId: string) => void;
+  onPieceHover?: (piece: Piece | null) => void;
+  isPreparation: boolean;
+  highlightedTiles?: Position[];
+}
 
-  const handleCellClick = (x: number, y: number) => {
-    const existingPiece = boardState.pieces.find(p => p.x === x && p.y === y)
-
-    if (selectedUnit) {
-      // Try to deploy selected unit
-      if (!existingPiece) {
-        placeUnitOnBoard(selectedUnit, x, y)
-        setSelectedUnit(null)
+export function BoardGrid({
+  board,
+  playerId: _playerId,
+  selectedPieceId,
+  onTileClick,
+  onPieceClick,
+  onPieceRightClick,
+  onPieceHover,
+  isPreparation,
+  highlightedTiles = [],
+}: BoardGridProps) {
+  // Generate grid cells
+  const grid = useMemo(() => {
+    const cells: { position: Position; isPlayerSide: boolean }[] = [];
+    
+    for (let y = 0; y < BOARD_HEIGHT; y++) {
+      for (let x = 0; x < BOARD_WIDTH; x++) {
+        cells.push({
+          position: { x, y },
+          isPlayerSide: y >= BOARD_HEIGHT / 2,  // Bottom half is player's side
+        });
       }
-    } else if (existingPiece) {
-      // Remove unit
-      removeUnitFromBoard(x, y)
     }
-  }
+    
+    return cells;
+  }, []);
+
+  const highlightedSet = useMemo(() => {
+    return new Set(highlightedTiles.map(p => positionToKey(p)));
+  }, [highlightedTiles]);
 
   return (
-    <div className="space-y-2">
-      <div
-        className="grid gap-1 bg-gray-800 p-2 rounded"
+    <div 
+      className="relative bg-gradient-to-b from-stone-900 to-stone-950 rounded-xl p-2 border-2 border-stone-700"
+      style={{
+        backgroundImage: `
+          linear-gradient(to bottom, rgba(28, 25, 23, 0.95), rgba(12, 10, 9, 0.95)),
+          url('/images/grid-pattern.svg')
+        `,
+        backgroundSize: '100% 100%, 60px 60px',
+      }}
+    >
+      {/* Grid */}
+      <div 
+        className="grid gap-1"
         style={{
-          gridTemplateColumns: `repeat(${BOARD_WIDTH}, minmax(0, 1fr))`,
+          gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)`,
+          gridTemplateRows: `repeat(${BOARD_HEIGHT}, 1fr)`,
         }}
       >
-        {Array.from({ length: BOARD_HEIGHT * BOARD_WIDTH }).map((_, idx) => {
-          const x = idx % BOARD_WIDTH
-          const y = Math.floor(idx / BOARD_WIDTH)
-          const piece = boardState.pieces.find(p => p.x === x && p.y === y)
-          const fort = boardState.fortifications.find(f => f.x === x && f.y === y)
-          const def = piece ? UNIT_DEFINITIONS[piece.type] : null
+        {grid.map(({ position, isPlayerSide }) => {
+          const key = positionToKey(position);
+          const pieceId = board.piecePositions[key];
+          const piece = pieceId ? board.pieces[pieceId] : null;
+          const isHighlighted = highlightedSet.has(key);
+          const canPlace = isPreparation && isPlayerSide && !piece;
 
           return (
-            <div
-              key={idx}
-              onClick={() => handleCellClick(x, y)}
+            <motion.div
+              key={key}
               className={`
-                aspect-square border-2 rounded
-                ${piece ? 'bg-blue-600 border-blue-400' : 'bg-gray-700 border-gray-600'}
-                ${selectedUnit ? 'cursor-pointer hover:bg-blue-500' : piece ? 'cursor-pointer' : ''}
-                flex items-center justify-center relative
+                relative aspect-square rounded-lg border-2 transition-all duration-200
+                ${isPlayerSide 
+                  ? 'bg-stone-800/60 border-stone-600/50' 
+                  : 'bg-stone-900/40 border-stone-700/30'
+                }
+                ${isHighlighted ? 'bg-amber-500/30 border-amber-400' : ''}
+                ${canPlace && !piece ? 'hover:bg-amber-500/20 hover:border-amber-500/50 cursor-pointer' : ''}
+                ${!isPlayerSide && isPreparation ? 'cursor-not-allowed opacity-50' : ''}
               `}
+              onClick={() => {
+                if (piece) {
+                  onPieceClick(piece.id);
+                } else if (canPlace) {
+                  onTileClick(position);
+                }
+              }}
+              onMouseEnter={() => piece && onPieceHover?.(piece)}
+              onMouseLeave={() => onPieceHover?.(null)}
+              whileHover={canPlace ? { scale: 1.02 } : undefined}
             >
-              {piece && def && (
-                <div className="text-center">
-                  <img
-                    src={def.image}
-                    alt={def.name}
-                    className="w-8 h-8 mx-auto mb-1"
-                  />
-                  <div className="text-xs text-white">
-                    {piece.starLevel}★
-                  </div>
-                  <div className="text-xs text-yellow-300">
-                    {piece.hp}/{piece.maxHp}
-                  </div>
-                </div>
+              {/* Grid coordinate (debug) */}
+              <div className="absolute top-0.5 left-0.5 text-[8px] text-stone-600 font-mono opacity-50">
+                {position.x},{position.y}
+              </div>
+
+              {/* Piece */}
+              <AnimatePresence mode="popLayout">
+                {piece && (
+                  <motion.div
+                    key={piece.id}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className="absolute inset-1 flex items-center justify-center"
+                  >
+                    <UnitCard
+                      piece={piece}
+                      selected={selectedPieceId === piece.id}
+                      onClick={() => onPieceClick(piece.id)}
+                      onRightClick={() => onPieceRightClick?.(piece.id)}
+                      size="sm"
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Enemy side indicator line */}
+              {position.y === BOARD_HEIGHT / 2 - 1 && (
+                <div className="absolute -bottom-1 left-0 right-0 h-0.5 bg-red-500/30" />
               )}
-              {fort && (
-                <div className="absolute inset-0 bg-yellow-600/50 border-2 border-yellow-400 rounded" />
-              )}
-            </div>
-          )
+            </motion.div>
+          );
         })}
       </div>
 
-      {selectedUnit && (
-        <div className="text-white text-sm text-center">
-          Click an empty cell on the board to deploy unit
-        </div>
-      )}
+      {/* Side labels */}
+      <div className="absolute -left-8 top-1/4 text-stone-500 text-xs font-bold transform -rotate-90">
+        Enemy
+      </div>
+      <div className="absolute -left-8 bottom-1/4 text-amber-500 text-xs font-bold transform -rotate-90">
+        Ally
+      </div>
     </div>
-  )
+  );
 }
+
+export default BoardGrid;
