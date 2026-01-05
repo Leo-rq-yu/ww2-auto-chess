@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useGameStore } from '../store/gameStore'
 import {
   getMatch,
@@ -11,8 +11,7 @@ import { subscribeToMatch, onPhaseChange, onBattleResults } from '../services/re
 import { calculateSynergies } from '../engine/synergy'
 import { calculateIncome } from '../engine/economy'
 import { generateShopCards } from '../engine/shop'
-import { insforge } from '../services/insforge'
-import { calculateBattleDamage } from '../engine/battle'
+import { runBattle } from '../services/battleService'
 
 export function useGameFlow(matchId: string) {
   const {
@@ -26,7 +25,6 @@ export function useGameFlow(matchId: string) {
     setPlayers,
     setCurrentPlayer,
     setBoardState,
-    setBenchState,
     setShopCards,
     setSynergies,
     setPhase,
@@ -150,38 +148,58 @@ export function useGameFlow(matchId: string) {
     player2: typeof players[0]
   ) => {
     try {
-      // Call Edge Function for battle
-      const { data, error } = await insforge.functions.invoke('run-battle', {
-        body: {
-          matchId: match?.matchId,
-          turn: match?.turnNumber || 1,
-          player1Id: player1.playerId,
-          player2Id: player2.playerId,
-        },
-      })
+      // Get both players' board states
+      const [board1, board2] = await Promise.all([
+        getBoardState(matchId, player1.playerId),
+        getBoardState(matchId, player2.playerId),
+      ])
 
-      if (error || !data) {
-        console.error('Battle error:', error)
+      if (!board1 || !board2) {
+        console.error('Failed to load board states')
         return
       }
 
-      // Update player HP
-      const winner = data.winner === 'player1' ? player1 : player2
-      const loser = data.winner === 'player1' ? player2 : player1
-      const damage = data.damage || 0
+      // Run battle
+      const battleResult = await runBattle(
+        matchId,
+        match?.turnNumber || 1,
+        player1.playerId,
+        player2.playerId,
+        board1,
+        board2
+      )
 
-      await updatePlayerStats(matchId, loser.playerId, {
-        hp: Math.max(0, loser.hp - damage),
-        isAlive: loser.hp - damage > 0,
-        lastOpponentId: winner.playerId,
-        loseStreak: loser.loseStreak + 1,
-        winStreak: 0,
-      })
+      if (!battleResult.winnerId && !battleResult.loserId) {
+        // Draw - both take damage
+        await updatePlayerStats(matchId, player1.playerId, {
+          hp: Math.max(0, player1.hp - battleResult.damage),
+          isAlive: player1.hp - battleResult.damage > 0,
+          lastOpponentId: player2.playerId,
+        })
+        await updatePlayerStats(matchId, player2.playerId, {
+          hp: Math.max(0, player2.hp - battleResult.damage),
+          isAlive: player2.hp - battleResult.damage > 0,
+          lastOpponentId: player1.playerId,
+        })
+      } else if (battleResult.winnerId && battleResult.loserId) {
+        // Update loser
+        const loser = battleResult.loserId === player1.playerId ? player1 : player2
+        const winner = battleResult.winnerId === player1.playerId ? player1 : player2
 
-      await updatePlayerStats(matchId, winner.playerId, {
-        winStreak: winner.winStreak + 1,
-        loseStreak: 0,
-      })
+        await updatePlayerStats(matchId, loser.playerId, {
+          hp: Math.max(0, loser.hp - battleResult.damage),
+          isAlive: loser.hp - battleResult.damage > 0,
+          lastOpponentId: winner.playerId,
+          loseStreak: loser.loseStreak + 1,
+          winStreak: 0,
+        })
+
+        // Update winner
+        await updatePlayerStats(matchId, winner.playerId, {
+          winStreak: winner.winStreak + 1,
+          loseStreak: 0,
+        })
+      }
     } catch (error) {
       console.error('Failed to run battle:', error)
     }

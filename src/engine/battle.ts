@@ -1,5 +1,5 @@
-import { Unit, Fortification, UnitType } from '../types/units'
-import { Board, BOARD_WIDTH, BOARD_HEIGHT } from './board'
+import { Unit, Fortification } from '../types/units'
+import { Board } from './board'
 import { BattleEvent } from '../types/game'
 import { applySynergyEffects, ActiveSynergy } from './synergy'
 
@@ -55,7 +55,7 @@ function findPath(
 }
 
 function findNearestEnemy(
-  board: Board,
+  _board: Board,
   unit: Unit,
   enemyPieces: Unit[]
 ): Unit | null {
@@ -160,7 +160,6 @@ export function runBattleTurn(state: BattleState): BattleState {
 
     const isPlayer1 = state.player1Pieces.includes(unit)
     const enemyPieces = isPlayer1 ? state.player2Pieces : state.player1Pieces
-    const enemyForts = isPlayer1 ? state.player2Fortifications : state.player1Fortifications
 
     // Apply synergy effects
     const synergies = isPlayer1 ? state.player1Synergies : state.player2Synergies

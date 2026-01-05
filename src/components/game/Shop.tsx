@@ -1,4 +1,3 @@
-import React, { useState } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import { UNIT_DEFINITIONS, UnitType } from '../../types/units'
 import { generateShopCards } from '../../engine/shop'

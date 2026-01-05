@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useUser } from '@insforge/react'
-import { createMatch, startMatch } from '../services/matchService'
+import { createMatch } from '../services/matchService'
 import { useGameStore } from '../store/gameStore'
 
 export default function LobbyPage() {
   const { user } = useUser()
   const navigate = useNavigate()
-  const [matchId, setMatchId] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const { setUserId, setMatchId: setStoreMatchId } = useGameStore()
 
@@ -26,7 +25,6 @@ export default function LobbyPage() {
         user.id,
         user.email || user.id
       )
-      setMatchId(newMatchId)
       setStoreMatchId(newMatchId)
       navigate(`/game/${newMatchId}`)
     } catch (error) {

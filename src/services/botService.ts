@@ -1,5 +1,5 @@
 import { insforge } from './insforge'
-import { Unit, UnitType, UNIT_DEFINITIONS } from '../types/units'
+import { Unit } from '../types/units'
 import { Player, BoardState, ShopCard } from '../types/game'
 
 const AI_MODELS = [
@@ -114,16 +114,25 @@ ${allPlayers.map((p, i) => `${i + 1}. ${p.playerName}: ${p.hp} HP`).join('\n')}`
   return basePrompt
 }
 
+interface BotCommand {
+  action: 'BUY' | 'DEPLOY' | 'REFRESH' | 'READY' | 'MERGE'
+  shopIndex?: number
+  pieceId?: string
+  x?: number
+  y?: number
+  mergeIds?: string[]
+}
+
 export async function getBotDecision(
   bot: Player,
-  matchId: string,
+  _matchId: string,
   turnNumber: number,
   boardState: BoardState,
   benchState: { pieces: Unit[] },
   shopCards: ShopCard[],
   synergies: any[],
   allPlayers: Player[]
-): Promise<BotAction[]> {
+): Promise<BotCommand[]> {
   // Randomly select an AI model
   const model = AI_MODELS[Math.floor(Math.random() * AI_MODELS.length)]
 
@@ -188,8 +197,8 @@ export async function getBotDecision(
     console.error('Bot AI decision error:', error)
     // Default behavior: buy first card if enough gold, otherwise ready
     if (bot.money >= shopCards[0]?.cost) {
-      return [{ action: 'BUY', shopIndex: 0 }, { action: 'READY' }]
+      return [{ action: 'BUY' as const, shopIndex: 0 }, { action: 'READY' as const }]
     }
-    return [{ action: 'READY' }]
+    return [{ action: 'READY' as const }]
   }
 }

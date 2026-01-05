@@ -17,13 +17,10 @@ export default function GamePage() {
   const { user } = useUser()
   const {
     match,
-    players,
-    currentPlayer,
     setMatch,
     setPlayers,
     setCurrentPlayer,
     setBoardState,
-    setBenchState,
     setMatchId,
   } = useGameStore()
 

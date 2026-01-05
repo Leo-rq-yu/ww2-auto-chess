@@ -1,6 +1,5 @@
-import React from 'react'
 import { useGameStore } from '../../store/gameStore'
-import { SYNERGIES } from '../../types/units'
+import { SYNERGIES, SynergyType } from '../../types/units'
 
 export default function SynergyPanel() {
   const { synergies } = useGameStore()
@@ -13,7 +12,7 @@ export default function SynergyPanel() {
       ) : (
         <div className="space-y-2">
           {synergies.map((synergy) => {
-            const def = SYNERGIES[synergy.type]
+            const def = SYNERGIES[synergy.type as SynergyType]
             return (
               <div
                 key={synergy.type}

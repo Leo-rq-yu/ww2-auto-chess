@@ -272,7 +272,6 @@ function processOneTurn(board, turn) {
           // Move piece
           delete updatedBoard.piecePositions[positionToKey(pos)];
           updatedBoard.piecePositions[positionToKey(nextStep)] = piece.id;
-          updatedBoard.pieces[piece.id] = { ...updatedBoard.pieces[piece.id], position: nextStep };
           
           events.push({
             turn,

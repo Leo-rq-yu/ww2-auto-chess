@@ -182,7 +182,7 @@ export async function updateBoardState(
   const { error } = await insforge.database
     .from('boards')
     .update({
-      board_state,
+      board_state: boardState,
       bench_state: benchState,
       active_synergies: synergies,
     })

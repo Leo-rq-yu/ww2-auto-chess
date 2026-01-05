@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { produce } from 'immer'
 import { Match, Player, BoardState, GamePhase, ShopCard } from '../types/game'
-import { Unit, ActiveSynergy } from '../types/units'
+import { Unit } from '../types/units'
+import { ActiveSynergy } from '../engine/synergy'
 
 interface GameState {
   // User & match info

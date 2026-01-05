@@ -1,11 +1,11 @@
-import React from 'react'
+import { useState } from 'react'
 import { useGameStore } from '../../store/gameStore'
 import { BOARD_WIDTH, BOARD_HEIGHT } from '../../engine/board'
 import { UNIT_DEFINITIONS } from '../../types/units'
 
 export default function BoardGrid() {
-  const { boardState, removeUnitFromBoard, placeUnitOnBoard, benchState } = useGameStore()
-  const [selectedUnit, setSelectedUnit] = React.useState<string | null>(null)
+  const { boardState, removeUnitFromBoard, placeUnitOnBoard } = useGameStore()
+  const [selectedUnit, setSelectedUnit] = useState<string | null>(null)
 
   const handleCellClick = (x: number, y: number) => {
     const existingPiece = boardState.pieces.find(p => p.x === x && p.y === y)
@@ -20,10 +20,6 @@ export default function BoardGrid() {
       // Remove unit
       removeUnitFromBoard(x, y)
     }
-  }
-
-  const handleBenchUnitClick = (unitId: string) => {
-    setSelectedUnit(selectedUnit === unitId ? null : unitId)
   }
 
   return (
