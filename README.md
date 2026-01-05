@@ -12,7 +12,7 @@
 
 *Built for the [AI Build-Off Holiday Hackathon](https://luma.com/5yrfsg0u) — InsForge Track*
 
-[🎮 Play Now](#getting-started) • [📖 Game Guide](#gameplay) • [🛠️ Tech Stack](#technology-stack)
+[🎮 Play Now](https://ww2-auto-chess-4efai30uv-leorqyus-projects.vercel.app/) • [📖 Game Guide](#gameplay) • [🛠️ Tech Stack](#technology-stack)
 
 </div>
 
@@ -29,7 +29,7 @@
 
 ---
 
-## 🎮 Gameplay
+## 📖 Game Guide
 
 ### Core Loop
 
