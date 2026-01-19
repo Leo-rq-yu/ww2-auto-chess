@@ -141,6 +141,11 @@ export function getBotMemoryState(matchId: string, botId: string): BotMemoryStat
 
 // Subscribe bot to match events via Realtime
 export async function subscribeBotToMatch(matchId: string, botId: string): Promise<void> {
+  // Ensure we're subscribed to the match channel first (so we can publish)
+  await realtimeService.subscribeToMatch(matchId, () => {
+    // Empty handler - we just need to ensure the channel subscription exists
+  });
+
   // Subscribe to preparation phase start
   realtimeService.onPhaseChange(matchId, async (phase, turnNumber) => {
     if (phase === 'preparation') {

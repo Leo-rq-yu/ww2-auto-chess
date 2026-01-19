@@ -204,6 +204,10 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
                 player2Id,
               };
               setBattleResult(result);
+              
+              // Mark as processed BEFORE applying to prevent double-processing
+              // when we receive our own published results via realtime subscription
+              battleResultsProcessedRef.current = true;
               applyBattleResult(result);
 
               // Apply results to bots that participated
@@ -453,16 +457,27 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
     }, 3000);
   }, [matchId, turnNumber, clearBattle, setPhase, startPreparationPhase]);
 
+  // Track the matchId that we've subscribed to
+  const subscribedMatchIdRef = useRef<string | null>(null);
+
   // Set up Realtime listeners (no polling!) - only once per match
   useEffect(() => {
     if (!matchId || !currentUserId) return;
 
-    // Prevent setting up listeners multiple times
-    if (listenersSetupRef.current) {
-      console.log('[GameFlow] Listeners already setup, skipping');
+    // Only setup if matchId changed or not yet setup
+    if (subscribedMatchIdRef.current === matchId && listenersSetupRef.current) {
+      console.log('[GameFlow] Listeners already setup for this match, skipping');
       return;
     }
+
+    // If we had a different match subscribed, clean it up first
+    if (subscribedMatchIdRef.current && subscribedMatchIdRef.current !== matchId) {
+      console.log('[GameFlow] Match changed, cleaning up old subscription');
+      realtimeService.unsubscribeFromMatch(subscribedMatchIdRef.current);
+    }
+
     listenersSetupRef.current = true;
+    subscribedMatchIdRef.current = matchId;
 
     console.log('[GameFlow] Setting up Realtime listeners for match:', matchId);
 
@@ -582,11 +597,28 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
     });
 
     return () => {
+      // Only unsubscribe on actual unmount, not on re-renders due to dependency changes
+      // The matchId check at the start of the effect handles the case where matchId changes
+      // This cleanup only runs on true unmount
       listenersSetupRef.current = false;
-      realtimeService.unsubscribeFromMatch(matchId);
+      // Don't unsubscribe here - it causes issues when dependencies change but matchId stays the same
+      // The subscription is cleaned up when matchId changes (handled above) or when leaving the game
     };
-    // Store functions are stable references from Zustand
-  }, [matchId, currentUserId, setBattleState, setBattleResult, applyBattleResult, clearBattle, setPhase, setTurnNumber, updatePlayerStats, startBattlePhase]);
+    // Note: We intentionally exclude startBattlePhase from dependencies because it changes frequently
+    // when players array updates. The function is called via closure and always uses latest state.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, currentUserId]);
+
+  // Cleanup subscription only on unmount
+  useEffect(() => {
+    return () => {
+      if (subscribedMatchIdRef.current) {
+        console.log('[GameFlow] Component unmounting, cleaning up subscription');
+        realtimeService.unsubscribeFromMatch(subscribedMatchIdRef.current);
+        subscribedMatchIdRef.current = null;
+      }
+    };
+  }, []);
 
   // Update ready tracker when players change
   useEffect(() => {
