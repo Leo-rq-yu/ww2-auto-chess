@@ -20,7 +20,7 @@ export const UNIT_DEFINITIONS: Record<string, UnitDefinition> = {
     isAirUnit: false,
     traits: ['infantry'],
     description: 'Basic melee unit, high HP',
-    imageUrl: '/images/infantry.webp',
+    imageUrl: 'https://zwtjw5tm.us-west.insforge.app/api/storage/buckets/images/objects/infantry.webp',
   },
   engineer: {
     typeId: 'engineer',
@@ -36,7 +36,7 @@ export const UNIT_DEFINITIONS: Record<string, UnitDefinition> = {
     isAirUnit: false,
     traits: ['engineer'],
     description: 'Cannot attack, provides fortification to allies',
-    imageUrl: '/images/engineer.webp',
+    imageUrl: 'https://zwtjw5tm.us-west.insforge.app/api/storage/buckets/images/objects/engineer.webp',
   },
   armored_car: {
     typeId: 'armored_car',
@@ -52,7 +52,7 @@ export const UNIT_DEFINITIONS: Record<string, UnitDefinition> = {
     isAirUnit: false,
     traits: ['armor'],
     description: 'High mobility, bonus vs infantry, countered by tanks',
-    imageUrl: '/images/armored-cars.webp',
+    imageUrl: 'https://zwtjw5tm.us-west.insforge.app/api/storage/buckets/images/objects/armored-cars.webp',
   },
   tank: {
     typeId: 'tank',
@@ -68,7 +68,7 @@ export const UNIT_DEFINITIONS: Record<string, UnitDefinition> = {
     isAirUnit: false,
     traits: ['armor'],
     description: 'Heavy unit, high HP and attack, bonus vs armored cars',
-    imageUrl: '/images/tank.webp',
+    imageUrl: 'https://zwtjw5tm.us-west.insforge.app/api/storage/buckets/images/objects/tank.webp',
   },
   artillery: {
     typeId: 'artillery',
@@ -84,7 +84,7 @@ export const UNIT_DEFINITIONS: Record<string, UnitDefinition> = {
     isAirUnit: false,
     traits: ['artillery'],
     description: 'Ranged AOE, weak in melee, cannot target aircraft',
-    imageUrl: '/images/artillery.webp',
+    imageUrl: 'https://zwtjw5tm.us-west.insforge.app/api/storage/buckets/images/objects/artillery.webp',
   },
   anti_air: {
     typeId: 'anti_air',
@@ -100,7 +100,7 @@ export const UNIT_DEFINITIONS: Record<string, UnitDefinition> = {
     isAirUnit: false,
     traits: ['artillery'],
     description: '4-5 damage vs aircraft, half damage vs heavy armor',
-    imageUrl: '/images/anti-air.webp',
+    imageUrl: 'https://zwtjw5tm.us-west.insforge.app/api/storage/buckets/images/objects/anti-air.webp',
   },
   aircraft: {
     typeId: 'aircraft',
@@ -116,7 +116,7 @@ export const UNIT_DEFINITIONS: Record<string, UnitDefinition> = {
     isAirUnit: true,
     traits: ['air'],
     description: 'Air unit, ignores fortifications, artillery cannot counter',
-    imageUrl: '/images/aircraft.webp',
+    imageUrl: 'https://zwtjw5tm.us-west.insforge.app/api/storage/buckets/images/objects/aircraft.webp',
   },
 };
 
