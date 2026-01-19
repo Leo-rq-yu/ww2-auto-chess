@@ -87,7 +87,7 @@ export function UnitCard({
       {/* Unit Image */}
       <div className="absolute inset-0 flex items-center justify-center p-1">
         <img
-          src={`../../assets/${def.imageUrl}`}
+          src={def.imageUrl}
           alt={def.name}
           className={`${imageSizeClasses[size]} object-contain drop-shadow-lg`}
         />
