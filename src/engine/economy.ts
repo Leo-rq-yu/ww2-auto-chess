@@ -68,9 +68,9 @@ export function updatePlayerStreaks(
 // Calculate damage dealt to loser
 export function calculateDamageToLoser(battleResult: BattleResult): number {
   if (battleResult.isDraw) {
-    return 5;  // Fixed draw damage
+    return 5; // Fixed draw damage
   }
-  
+
   // Damage = sum of surviving units' attack
   return Math.max(1, battleResult.damageDealt);
 }
@@ -81,7 +81,7 @@ export function calculateSellPrice(unitCost: number, starLevel: number): number 
   // 2-star: 3x cost - 1
   // 3-star: 9x cost - 1
   const multiplier = Math.pow(3, starLevel - 1);
-  return Math.max(1, (unitCost * multiplier) - 1);
+  return Math.max(1, unitCost * multiplier - 1);
 }
 
 // Level up costs
@@ -117,15 +117,15 @@ export const UNIT_CAP_PER_LEVEL: Record<number, number> = {
   10: 99,
 };
 
-export function getUnitCap(_level: number): number {
-  return 99; // No limit
+export function getUnitCap(): number {
+  return 99; // No limit - game has no unit cap restriction
 }
 
 // Shop odds per level (probability of each cost tier)
 // More balanced distribution to ensure variety even at low levels
 export const SHOP_ODDS: Record<number, Record<number, number>> = {
   // Level: { cost1: %, cost2: %, cost3: % }
-  1: { 1: 50, 2: 35, 3: 15 },  // More variety at level 1
+  1: { 1: 50, 2: 35, 3: 15 }, // More variety at level 1
   2: { 1: 45, 2: 35, 3: 20 },
   3: { 1: 40, 2: 35, 3: 25 },
   4: { 1: 35, 2: 35, 3: 30 },
@@ -139,4 +139,3 @@ export const SHOP_ODDS: Record<number, Record<number, number>> = {
 export function getShopOdds(level: number): Record<number, number> {
   return SHOP_ODDS[Math.min(level, 9)] || SHOP_ODDS[9];
 }
-

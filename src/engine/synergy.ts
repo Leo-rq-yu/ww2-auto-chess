@@ -8,17 +8,17 @@ import { UNIT_DEFINITIONS, SYNERGY_DEFINITIONS } from '../types/units';
 // Count traits from a list of pieces
 export function countTraits(pieces: Piece[]): Map<TraitType, number> {
   const counts = new Map<TraitType, number>();
-  
+
   for (const piece of pieces) {
     const def = UNIT_DEFINITIONS[piece.typeId];
     if (!def) continue;
-    
+
     for (const trait of def.traits) {
       const current = counts.get(trait) || 0;
       counts.set(trait, current + 1);
     }
   }
-  
+
   return counts;
 }
 
@@ -26,7 +26,7 @@ export function countTraits(pieces: Piece[]): Map<TraitType, number> {
 export function calculateSynergies(pieces: Piece[]): ActiveSynergy[] {
   const traitCounts = countTraits(pieces);
   const activeSynergies: ActiveSynergy[] = [];
-  
+
   for (const synergy of SYNERGY_DEFINITIONS) {
     const count = traitCounts.get(synergy.traitType) || 0;
     activeSynergies.push({
@@ -35,28 +35,25 @@ export function calculateSynergies(pieces: Piece[]): ActiveSynergy[] {
       isActive: count >= synergy.triggerCount,
     });
   }
-  
+
   return activeSynergies;
 }
 
 // Apply synergy bonuses to pieces
-export function applySynergyBonuses(
-  pieces: Piece[],
-  synergies: ActiveSynergy[]
-): Piece[] {
+export function applySynergyBonuses(pieces: Piece[], synergies: ActiveSynergy[]): Piece[] {
   const modifiedPieces = pieces.map(p => ({ ...p }));
-  
+
   for (const synergy of synergies) {
     if (!synergy.isActive) continue;
-    
+
     const synergyDef = SYNERGY_DEFINITIONS.find(s => s.synergyId === synergy.synergyId);
     if (!synergyDef) continue;
-    
+
     // Apply effects to matching pieces
     for (const piece of modifiedPieces) {
       const unitDef = UNIT_DEFINITIONS[piece.typeId];
       if (!unitDef || !unitDef.traits.includes(synergyDef.traitType)) continue;
-      
+
       // Apply stat bonuses
       if (synergyDef.effect.stat && synergyDef.effect.value) {
         switch (synergyDef.effect.stat) {
@@ -72,13 +69,13 @@ export function applySynergyBonuses(
             break;
         }
       }
-      
+
       // Handle special effects (these are tracked and applied during battle)
       // - fortification_buff: Engineer synergy enhances fortifications
       // - dodge_chance_25: Air synergy gives dodge chance
     }
   }
-  
+
   return modifiedPieces;
 }
 
@@ -89,25 +86,23 @@ export function wouldActivateSynergy(
 ): { synergyId: string; name: string } | null {
   const newUnitDef = UNIT_DEFINITIONS[newPieceTypeId];
   if (!newUnitDef) return null;
-  
+
   const currentCounts = countTraits(currentPieces);
-  
+
   for (const trait of newUnitDef.traits) {
     const currentCount = currentCounts.get(trait) || 0;
     const newCount = currentCount + 1;
-    
+
     // Check if this would trigger a synergy
-    const synergy = SYNERGY_DEFINITIONS.find(s => 
-      s.traitType === trait && 
-      currentCount < s.triggerCount && 
-      newCount >= s.triggerCount
+    const synergy = SYNERGY_DEFINITIONS.find(
+      s => s.traitType === trait && currentCount < s.triggerCount && newCount >= s.triggerCount
     );
-    
+
     if (synergy) {
       return { synergyId: synergy.synergyId, name: synergy.name };
     }
   }
-  
+
   return null;
 }
 
@@ -124,7 +119,7 @@ export interface SynergyProgress {
 
 export function getSynergyProgress(pieces: Piece[]): SynergyProgress[] {
   const traitCounts = countTraits(pieces);
-  
+
   return SYNERGY_DEFINITIONS.map(synergy => ({
     synergyId: synergy.synergyId,
     name: synergy.name,
@@ -143,19 +138,19 @@ export function getPotentialSynergies(
 ): { synergyId: string; name: string; unitsNeeded: string[] }[] {
   const traitCounts = countTraits(pieces);
   const potentials: { synergyId: string; name: string; unitsNeeded: string[] }[] = [];
-  
+
   for (const synergy of SYNERGY_DEFINITIONS) {
     const currentCount = traitCounts.get(synergy.traitType) || 0;
-    if (currentCount >= synergy.triggerCount) continue;  // Already active
-    
+    if (currentCount >= synergy.triggerCount) continue; // Already active
+
     const needed = synergy.triggerCount - currentCount;
-    
+
     // Find units that can contribute to this synergy
     const contributingUnits = availableUnits.filter(unitId => {
       const def = UNIT_DEFINITIONS[unitId];
       return def && def.traits.includes(synergy.traitType);
     });
-    
+
     if (contributingUnits.length >= needed) {
       potentials.push({
         synergyId: synergy.synergyId,
@@ -164,7 +159,6 @@ export function getPotentialSynergies(
       });
     }
   }
-  
+
   return potentials;
 }
-

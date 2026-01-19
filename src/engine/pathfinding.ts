@@ -28,7 +28,7 @@ export class Pathfinder {
     for (let x = 0; x < this.size.width; x++) {
       const column: number[] = [];
       for (let y = 0; y < this.size.height; y++) {
-        column.push(1);  // 1 = walkable
+        column.push(1); // 1 = walkable
       }
       grid.push(column);
     }
@@ -47,10 +47,10 @@ export class Pathfinder {
 
   getPath(board: BoardState, start: Position, end: Position): Position[] | null {
     this.setWeights(board);
-    
+
     // Mark start as walkable (we're standing on it)
     this.graph.grid[start.x][start.y].weight = 1;
-    
+
     // Mark end as walkable (we want to reach it)
     if (isValidPosition(end, board)) {
       this.graph.grid[end.x][end.y].weight = 1;
@@ -94,7 +94,7 @@ export function getAttackPositions(
   attackRange: number
 ): Position[] {
   const positions: Position[] = [];
-  
+
   for (let x = 0; x < boardSize.width; x++) {
     for (let y = 0; y < boardSize.height; y++) {
       const pos = { x, y };
@@ -103,22 +103,18 @@ export function getAttackPositions(
       }
     }
   }
-  
+
   return positions;
 }
 
 // Sort paths by step count and direction priority
-export function sortPaths(
-  paths: Path[],
-  startPos: Position,
-  facingUp: boolean
-): void {
+export function sortPaths(paths: Path[], startPos: Position, facingUp: boolean): void {
   const forwardY = facingUp ? -1 : 1;
   const directionPriority = [
-    { x: 0, y: forwardY },   // Forward
-    { x: forwardY, y: 0 },   // Right (relative to facing)
-    { x: 0, y: -forwardY },  // Backward
-    { x: -forwardY, y: 0 },  // Left (relative to facing)
+    { x: 0, y: forwardY }, // Forward
+    { x: forwardY, y: 0 }, // Right (relative to facing)
+    { x: 0, y: -forwardY }, // Backward
+    { x: -forwardY, y: 0 }, // Left (relative to facing)
   ];
 
   const getPriority = (step: Position): number => {
@@ -146,7 +142,7 @@ export function getNextPiecePosition(
 ): Position | null {
   // Get all positions from which we can attack the target
   const attackPositions = getAttackPositions(board.size, targetPos, attackRange);
-  
+
   // Find paths to each attack position
   const paths: Path[] = [];
   for (const pos of attackPositions) {
@@ -220,4 +216,3 @@ export function findEnemyInRange(
 
   return null;
 }
-

@@ -78,7 +78,7 @@ export const UNIT_DEFINITIONS: Record<string, UnitDefinition> = {
     baseAttackMin: 3,
     baseAttackMax: 4,
     baseDefense: 0,
-    baseSpeed: 0,  // Cannot move (can be 0-1 based on rules)
+    baseSpeed: 0, // Cannot move (can be 0-1 based on rules)
     baseRange: 3,
     attackType: 'aoe_radius',
     isAirUnit: false,
@@ -200,7 +200,15 @@ export const TRAIT_DEFINITIONS = {
     id: 'tenacity' as const,
     name: 'Tenacity',
     description: '+1 max HP per star level',
-    applicableTo: ['infantry', 'engineer', 'armored_car', 'tank', 'artillery', 'anti_air', 'aircraft'] as const,
+    applicableTo: [
+      'infantry',
+      'engineer',
+      'armored_car',
+      'tank',
+      'artillery',
+      'anti_air',
+      'aircraft',
+    ] as const,
   },
 };
 
@@ -217,7 +225,7 @@ export function getSynergies(): Synergy[] {
 // Calculate synergy for a player's board
 export function calculateActiveSynergies(pieces: { typeId: string }[]): Map<string, number> {
   const traitCounts = new Map<string, number>();
-  
+
   for (const piece of pieces) {
     const def = getUnitDefinition(piece.typeId);
     if (def) {
@@ -226,6 +234,6 @@ export function calculateActiveSynergies(pieces: { typeId: string }[]): Map<stri
       }
     }
   }
-  
+
   return traitCounts;
 }

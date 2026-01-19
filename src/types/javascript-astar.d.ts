@@ -43,4 +43,3 @@ declare module 'javascript-astar' {
     diagonal: (pos0: GridNode, pos1: GridNode) => number;
   };
 }
-

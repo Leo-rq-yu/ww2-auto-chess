@@ -1,24 +1,22 @@
-import { 
-  BoardState, 
-  Piece, 
-  Position, 
-  BattleEvent, 
-  BattleResult,
-  PieceCombatInfo,
-} from '../types';
+import { BoardState, Piece, Position, BattleEvent, BattleResult, PieceCombatInfo } from '../types';
 import { UNIT_DEFINITIONS } from '../types/units';
-import { 
-  getPiecePosition, 
-  isInAttackRange, 
+import {
+  getPiecePosition,
+  isInAttackRange,
   getAlivePieces,
   getAlivePiecesByOwner,
   movePiece,
   getRadiusAoePositions,
   getLineSweepPositions,
   getPieceAtPosition,
-  positionToKey
+  positionToKey,
 } from './board';
-import { Pathfinder, findNearestEnemy, findEnemyInRange, getNextPiecePosition } from './pathfinding';
+import {
+  Pathfinder,
+  findNearestEnemy,
+  findEnemyInRange,
+  getNextPiecePosition,
+} from './pathfinding';
 
 // =============================================
 // Battle Simulation Engine
@@ -41,7 +39,7 @@ export interface BattleState {
 // Initialize combat info for all pieces
 function initializeCombatInfo(board: BoardState): Map<string, PieceCombatInfo> {
   const combatInfo = new Map<string, PieceCombatInfo>();
-  
+
   for (const piece of Object.values(board.pieces)) {
     combatInfo.set(piece.id, {
       state: { type: 'wandering' },
@@ -50,7 +48,7 @@ function initializeCombatInfo(board: BoardState): Map<string, PieceCombatInfo> {
       canAttackAtTurn: INITIAL_ATTACK_DELAY,
     });
   }
-  
+
   return combatInfo;
 }
 
@@ -58,11 +56,12 @@ function initializeCombatInfo(board: BoardState): Map<string, PieceCombatInfo> {
 function calculateDamage(
   attacker: Piece,
   defender: Piece,
-  _attackerDef: typeof UNIT_DEFINITIONS[string],
-  defenderDef: typeof UNIT_DEFINITIONS[string]
+  _attackerDef: (typeof UNIT_DEFINITIONS)[string],
+  defenderDef: (typeof UNIT_DEFINITIONS)[string]
 ): number {
   // Base damage is random between min and max
-  const baseDamage = attacker.attackMin + Math.floor(Math.random() * (attacker.attackMax - attacker.attackMin + 1));
+  const baseDamage =
+    attacker.attackMin + Math.floor(Math.random() * (attacker.attackMax - attacker.attackMin + 1));
   let damage = baseDamage;
 
   // Apply bonus damage based on unit type matchups
@@ -76,10 +75,13 @@ function calculateDamage(
   }
   // Anti-air vs aircraft: bonus damage (4-5 instead of 2-3)
   if (attacker.typeId === 'anti_air' && defender.typeId === 'aircraft') {
-    damage += 2;  // Additional +2 to reach 4-5 damage
+    damage += 2; // Additional +2 to reach 4-5 damage
   }
   // Anti-air vs heavy armor: half damage
-  if (attacker.typeId === 'anti_air' && (defender.typeId === 'tank' || defender.typeId === 'armored_car')) {
+  if (
+    attacker.typeId === 'anti_air' &&
+    (defender.typeId === 'tank' || defender.typeId === 'armored_car')
+  ) {
     damage = Math.floor(damage / 2);
   }
 
@@ -100,7 +102,7 @@ function calculateDamage(
 
   // Apply defense reduction
   let effectiveDefense = defender.defense;
-  
+
   // Fortification armor
   if (defender.fortification && defender.fortification.remainingTurns > 0) {
     effectiveDefense += defender.fortification.armor;
@@ -122,7 +124,7 @@ function canAttack(attacker: Piece, defender: Piece): boolean {
   if (attacker.typeId === 'artillery' && defender.typeId === 'aircraft') {
     return false;
   }
-  
+
   // Engineer cannot attack
   if (attacker.typeId === 'engineer') {
     return false;
@@ -141,13 +143,13 @@ function processAttack(
 ): BattleState {
   const attackerDef = UNIT_DEFINITIONS[attacker.typeId];
   const defenderDef = UNIT_DEFINITIONS[target.typeId];
-  
+
   if (!canAttack(attacker, target)) {
     return state;
   }
 
   const events: BattleEvent[] = [...state.events];
-  let board = { ...state.board, pieces: { ...state.board.pieces } };
+  const board = { ...state.board, pieces: { ...state.board.pieces } };
 
   // Determine attack targets based on attack type
   let targets: { piece: Piece; pos: Position }[] = [];
@@ -157,21 +159,25 @@ function processAttack(
     case 'ranged':
       targets = [{ piece: target, pos: targetPos }];
       break;
-      
-    case 'aoe_radius':
+
+    case 'aoe_radius': {
       // Hit target and adjacent positions
       const aoePositions = getRadiusAoePositions(targetPos, board);
       for (const pos of aoePositions) {
         const pieceAtPos = getPieceAtPosition(pos, board);
         // AOE doesn't hit aircraft (for artillery)
-        if (pieceAtPos && pieceAtPos.ownerId !== attacker.ownerId && 
-            !(attacker.typeId === 'artillery' && pieceAtPos.typeId === 'aircraft')) {
+        if (
+          pieceAtPos &&
+          pieceAtPos.ownerId !== attacker.ownerId &&
+          !(attacker.typeId === 'artillery' && pieceAtPos.typeId === 'aircraft')
+        ) {
           targets.push({ piece: pieceAtPos, pos });
         }
       }
       break;
-      
-    case 'line_sweep':
+    }
+
+    case 'line_sweep': {
       // Determine sweep direction based on facing
       const direction = attacker.facingUp ? 'vertical' : 'horizontal';
       const sweepPositions = getLineSweepPositions(attackerPos, direction, attacker.range, board);
@@ -186,11 +192,17 @@ function processAttack(
         targets.push({ piece: target, pos: targetPos });
       }
       break;
+    }
   }
 
   // Apply damage to all targets
   for (const { piece: targetPiece, pos } of targets) {
-    const damage = calculateDamage(attacker, targetPiece, attackerDef, UNIT_DEFINITIONS[targetPiece.typeId]);
+    const damage = calculateDamage(
+      attacker,
+      targetPiece,
+      attackerDef,
+      UNIT_DEFINITIONS[targetPiece.typeId]
+    );
     const newHp = Math.max(0, targetPiece.currentHp - damage);
 
     board.pieces[targetPiece.id] = {
@@ -230,11 +242,13 @@ function processAttack(
   // Check for blitz trait (extra attack chance)
   for (const trait of attacker.traits) {
     if (trait.traitId === 'blitz') {
-      const chance = 0.30 * trait.level;
+      const chance = 0.3 * trait.level;
       if (Math.random() < chance) {
         // Recursive call for extra attack (be careful with infinite loops)
         // For now, just add bonus damage to first target
-        const bonusDamage = Math.floor(calculateDamage(attacker, target, attackerDef, defenderDef) * 0.5);
+        const bonusDamage = Math.floor(
+          calculateDamage(attacker, target, attackerDef, defenderDef) * 0.5
+        );
         if (targets.length > 0) {
           const firstTarget = targets[0].piece;
           const currentHp = board.pieces[firstTarget.id].currentHp;
@@ -297,7 +311,7 @@ function simulatePieceTurn(
       const newPositions = { ...state.board.piecePositions };
       const posKey = positionToKey(piecePos);
       delete newPositions[posKey];
-      
+
       return {
         ...state,
         board: {
@@ -351,7 +365,7 @@ function simulatePieceTurn(
       state: { type: 'attacking', targetId: target.piece.id },
       canAttackAtTurn: state.turn + ATTACK_COOLDOWN,
     });
-    
+
     let newState = { ...state, combatInfo: newCombatInfo };
     newState = processAttack(newState, piece, piecePos, target.piece, target.position);
     return newState;
@@ -359,7 +373,7 @@ function simulatePieceTurn(
 
   // If no target in range, find nearest enemy and move towards them
   const nearestEnemy = findNearestEnemy(state.board, piece, piecePos);
-  
+
   if (nearestEnemy && state.turn >= combatInfo.canMoveAtTurn && piece.speed > 0) {
     const nextPos = getNextPiecePosition(
       pathfinder,
@@ -376,7 +390,7 @@ function simulatePieceTurn(
         ...combatInfo,
         canMoveAtTurn: state.turn + MOVE_COOLDOWN,
       });
-      
+
       let newState = { ...state, combatInfo: newCombatInfo };
       newState = processMovement(newState, piece, piecePos, nextPos);
       return newState;
@@ -395,19 +409,22 @@ function handleEngineerTurn(
   // Find friendly units adjacent to engineer (not aircraft)
   const board = { ...state.board, pieces: { ...state.board.pieces } };
   const events: BattleEvent[] = [...state.events];
-  
+
   const directions = [
-    { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 },
+    { x: 0, y: -1 },
+    { x: 1, y: 0 },
+    { x: 0, y: 1 },
+    { x: -1, y: 0 },
   ];
 
   for (const dir of directions) {
     const adjPos = { x: engineerPos.x + dir.x, y: engineerPos.y + dir.y };
     const adjPiece = getPieceAtPosition(adjPos, board);
-    
+
     if (adjPiece && adjPiece.ownerId === engineer.ownerId && adjPiece.typeId !== 'aircraft') {
       // Calculate fortification strength based on engineer's star level
-      const fortificationArmor = engineer.level;  // 1/2/3 based on stars
-      const fortificationDuration = 2 + engineer.level;  // 3/4/5 turns
+      const fortificationArmor = engineer.level; // 1/2/3 based on stars
+      const fortificationDuration = 2 + engineer.level; // 3/4/5 turns
 
       // Apply or refresh fortification
       board.pieces[adjPiece.id] = {
@@ -433,7 +450,7 @@ function handleEngineerTurn(
 // Decrement fortification turns
 function updateFortifications(state: BattleState): BattleState {
   const board = { ...state.board, pieces: { ...state.board.pieces } };
-  
+
   for (const piece of Object.values(board.pieces)) {
     if (piece.fortification && piece.fortification.remainingTurns > 0) {
       board.pieces[piece.id] = {
@@ -445,7 +462,7 @@ function updateFortifications(state: BattleState): BattleState {
       };
     }
   }
-  
+
   return { ...state, board };
 }
 
@@ -502,11 +519,11 @@ export function initializeBattle(board: BoardState): BattleState {
 // Run complete battle simulation
 export function runBattle(board: BoardState, maxTurns: number = 200): BattleState {
   let state = initializeBattle(board);
-  
+
   while (!state.isFinished && state.turn < maxTurns) {
     state = simulateTurn(state);
   }
-  
+
   return state;
 }
 
@@ -524,11 +541,11 @@ export function calculateBattleResult(
 
   // Calculate damage based on surviving units' total attack
   const player1TotalAttack = player1Survivors.reduce(
-    (sum, p) => sum + Math.floor((p.attackMin + p.attackMax) / 2), 
+    (sum, p) => sum + Math.floor((p.attackMin + p.attackMax) / 2),
     0
   );
   const player2TotalAttack = player2Survivors.reduce(
-    (sum, p) => sum + Math.floor((p.attackMin + p.attackMax) / 2), 
+    (sum, p) => sum + Math.floor((p.attackMin + p.attackMax) / 2),
     0
   );
 
@@ -558,9 +575,8 @@ export function calculateBattleResult(
       loserId: null,
       winnerSurvivors: Math.max(player1SurvivorCount, player2SurvivorCount),
       loserSurvivors: Math.min(player1SurvivorCount, player2SurvivorCount),
-      damageDealt: 5,  // Fixed draw damage
+      damageDealt: 5, // Fixed draw damage
       isDraw: true,
     };
   }
 }
-

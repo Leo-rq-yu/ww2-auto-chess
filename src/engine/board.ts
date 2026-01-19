@@ -69,7 +69,7 @@ export function removePieceFromBoard(board: BoardState, pieceId: string): BoardS
   const key = positionToKey(pos);
   const newPieces = { ...board.pieces };
   const newPositions = { ...board.piecePositions };
-  
+
   delete newPieces[pieceId];
   delete newPositions[key];
 
@@ -107,7 +107,7 @@ export function movePiece(board: BoardState, pieceId: string, newPos: Position):
 export function swapPieces(board: BoardState, pieceId1: string, pieceId2: string): BoardState {
   const pos1 = getPiecePosition(pieceId1, board);
   const pos2 = getPiecePosition(pieceId2, board);
-  
+
   if (!pos1 || !pos2) return board;
 
   const key1 = positionToKey(pos1);
@@ -138,7 +138,7 @@ export function cloneBoard(board: BoardState): BoardState {
     pieces: Object.fromEntries(
       Object.entries(board.pieces).map(([id, piece]) => [
         id,
-        { ...piece, traits: [...piece.traits] }
+        { ...piece, traits: [...piece.traits] },
       ])
     ),
     piecePositions: { ...board.piecePositions },
@@ -165,7 +165,7 @@ export function getAlivePiecesByOwner(board: BoardState, ownerId: string): Piece
 // Get all empty positions on the board
 export function getEmptyPositions(board: BoardState): Position[] {
   const positions: Position[] = [];
-  
+
   for (let x = 0; x < board.size.width; x++) {
     for (let y = 0; y < board.size.height; y++) {
       const pos = { x, y };
@@ -174,7 +174,7 @@ export function getEmptyPositions(board: BoardState): Position[] {
       }
     }
   }
-  
+
   return positions;
 }
 
@@ -184,14 +184,22 @@ export function getDistance(pos1: Position, pos2: Position): number {
 }
 
 // Check if target is within attack range
-export function isInAttackRange(attackerPos: Position, targetPos: Position, range: number): boolean {
+export function isInAttackRange(
+  attackerPos: Position,
+  targetPos: Position,
+  range: number
+): boolean {
   return getDistance(attackerPos, targetPos) <= range;
 }
 
 // Get all positions within a certain range (for AOE)
-export function getPositionsInRange(center: Position, range: number, board: BoardState): Position[] {
+export function getPositionsInRange(
+  center: Position,
+  range: number,
+  board: BoardState
+): Position[] {
   const positions: Position[] = [];
-  
+
   for (let x = center.x - range; x <= center.x + range; x++) {
     for (let y = center.y - range; y <= center.y + range; y++) {
       const pos = { x, y };
@@ -200,17 +208,17 @@ export function getPositionsInRange(center: Position, range: number, board: Boar
       }
     }
   }
-  
+
   return positions;
 }
 
 // Get adjacent positions (for melee range)
 export function getAdjacentPositions(pos: Position, board: BoardState): Position[] {
   const directions = [
-    { x: 0, y: -1 },  // up
-    { x: 1, y: 0 },   // right
-    { x: 0, y: 1 },   // down
-    { x: -1, y: 0 },  // left
+    { x: 0, y: -1 }, // up
+    { x: 1, y: 0 }, // right
+    { x: 0, y: 1 }, // down
+    { x: -1, y: 0 }, // left
   ];
 
   return directions
@@ -233,7 +241,7 @@ export function getLineSweepPositions(
   board: BoardState
 ): Position[] {
   const positions: Position[] = [];
-  
+
   if (direction === 'horizontal') {
     for (let x = attackerPos.x - length; x <= attackerPos.x + length; x++) {
       const pos = { x, y: attackerPos.y };
@@ -249,7 +257,7 @@ export function getLineSweepPositions(
       }
     }
   }
-  
+
   return positions;
 }
 
@@ -260,6 +268,9 @@ export function createBattleBoard(
   board2: BoardState,
   _player2Id: string
 ): BoardState {
+  // Unused params kept for API compatibility
+  void _player1Id;
+  void _player2Id;
   const battleBoard = createEmptyBoard();
   battleBoard.size = { width: BOARD_WIDTH, height: BOARD_HEIGHT * 2 };
 
@@ -276,9 +287,9 @@ export function createBattleBoard(
   // Player 2's pieces go on top half (facing down), mirrored
   for (const piece of Object.values(board2.pieces)) {
     if (piece.position) {
-      const newPos = { 
-        x: BOARD_WIDTH - 1 - piece.position.x,  // Mirror horizontally
-        y: BOARD_HEIGHT - 1 - piece.position.y  // Place on top half
+      const newPos = {
+        x: BOARD_WIDTH - 1 - piece.position.x, // Mirror horizontally
+        y: BOARD_HEIGHT - 1 - piece.position.y, // Place on top half
       };
       const newPiece = { ...piece, facingUp: false };
       battleBoard.pieces[piece.id] = { ...newPiece, position: newPos };
@@ -288,4 +299,3 @@ export function createBattleBoard(
 
   return battleBoard;
 }
-

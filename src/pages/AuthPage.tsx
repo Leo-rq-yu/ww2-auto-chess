@@ -9,7 +9,7 @@ import useGameStore from '../store/gameStore';
 export function AuthPage() {
   const navigate = useNavigate();
   const { setUser } = useGameStore();
-  
+
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,7 +31,7 @@ export function AuthPage() {
         });
 
         if ('error' in result && result.error) throw new Error(result.error.message);
-        
+
         const userId = result.data?.user?.id;
         if (!userId) throw new Error('Login failed');
 
@@ -77,7 +77,7 @@ export function AuthPage() {
         });
 
         if ('error' in result && result.error) throw new Error(result.error.message);
-        
+
         const userId = result.data?.user?.id;
         if (!userId) throw new Error('Registration failed');
 
@@ -98,9 +98,11 @@ export function AuthPage() {
 
         navigate('/lobby');
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Auth error:', err);
-      setError(err.message || (isLogin ? 'Login failed' : 'Registration failed'));
+      setError(
+        err instanceof Error ? err.message : isLogin ? 'Login failed' : 'Registration failed'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -131,10 +133,8 @@ export function AuthPage() {
               WW2 Auto-Chess
             </span>
           </h1>
-          <p className="text-stone-400">
-            Strategic Battle Royale
-          </p>
-          
+          <p className="text-stone-400">Strategic Battle Royale</p>
+
           {/* Unit Icons */}
           <div className="flex justify-center gap-3 mt-4">
             {[Sword, Shield, Target, Plane].map((Icon, i) => (
@@ -163,8 +163,8 @@ export function AuthPage() {
               <button
                 onClick={() => setIsLogin(true)}
                 className={`flex-1 py-2 text-center font-medium transition-colors border-b-2 ${
-                  isLogin 
-                    ? 'text-amber-400 border-amber-400' 
+                  isLogin
+                    ? 'text-amber-400 border-amber-400'
                     : 'text-stone-500 border-transparent hover:text-stone-300'
                 }`}
               >
@@ -173,8 +173,8 @@ export function AuthPage() {
               <button
                 onClick={() => setIsLogin(false)}
                 className={`flex-1 py-2 text-center font-medium transition-colors border-b-2 ${
-                  !isLogin 
-                    ? 'text-amber-400 border-amber-400' 
+                  !isLogin
+                    ? 'text-amber-400 border-amber-400'
                     : 'text-stone-500 border-transparent hover:text-stone-300'
                 }`}
               >
@@ -187,11 +187,14 @@ export function AuthPage() {
                 <div>
                   <label className="block text-sm text-stone-400 mb-2">Username</label>
                   <div className="relative">
-                    <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
+                    <User
+                      size={18}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500"
+                    />
                     <input
                       type="text"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={e => setUsername(e.target.value)}
                       placeholder="Enter username"
                       className="w-full pl-10 pr-4 py-3 bg-stone-900 border-2 border-stone-700 rounded-lg
                         text-white placeholder-stone-500 focus:border-amber-500 focus:outline-none
@@ -205,11 +208,14 @@ export function AuthPage() {
               <div>
                 <label className="block text-sm text-stone-400 mb-2">Email</label>
                 <div className="relative">
-                  <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
+                  <Mail
+                    size={18}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500"
+                  />
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={e => setEmail(e.target.value)}
                     placeholder="your@email.com"
                     className="w-full pl-10 pr-4 py-3 bg-stone-900 border-2 border-stone-700 rounded-lg
                       text-white placeholder-stone-500 focus:border-amber-500 focus:outline-none
@@ -222,11 +228,14 @@ export function AuthPage() {
               <div>
                 <label className="block text-sm text-stone-400 mb-2">Password</label>
                 <div className="relative">
-                  <Lock size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
+                  <Lock
+                    size={18}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-500"
+                  />
                   <input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
                     className="w-full pl-10 pr-4 py-3 bg-stone-900 border-2 border-stone-700 rounded-lg
                       text-white placeholder-stone-500 focus:border-amber-500 focus:outline-none
@@ -271,11 +280,7 @@ export function AuthPage() {
             </div>
 
             {/* Guest Play */}
-            <Button
-              variant="secondary"
-              onClick={handleGuestPlay}
-              className="w-full"
-            >
+            <Button variant="secondary" onClick={handleGuestPlay} className="w-full">
               Play as Guest
             </Button>
 

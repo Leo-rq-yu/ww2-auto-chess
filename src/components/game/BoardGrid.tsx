@@ -18,7 +18,7 @@ interface BoardGridProps {
 
 export function BoardGrid({
   board,
-  playerId: _playerId,
+  playerId,
   selectedPieceId,
   onTileClick,
   onPieceClick,
@@ -30,16 +30,16 @@ export function BoardGrid({
   // Generate grid cells
   const grid = useMemo(() => {
     const cells: { position: Position; isPlayerSide: boolean }[] = [];
-    
+
     for (let y = 0; y < BOARD_HEIGHT; y++) {
       for (let x = 0; x < BOARD_WIDTH; x++) {
         cells.push({
           position: { x, y },
-          isPlayerSide: y >= BOARD_HEIGHT / 2,  // Bottom half is player's side
+          isPlayerSide: y >= BOARD_HEIGHT / 2, // Bottom half is player's side
         });
       }
     }
-    
+
     return cells;
   }, []);
 
@@ -48,7 +48,7 @@ export function BoardGrid({
   }, [highlightedTiles]);
 
   return (
-    <div 
+    <div
       className="relative bg-gradient-to-b from-stone-900 to-stone-950 rounded-xl p-2 border-2 border-stone-700"
       style={{
         backgroundImage: `
@@ -59,7 +59,7 @@ export function BoardGrid({
       }}
     >
       {/* Grid */}
-      <div 
+      <div
         className="grid gap-1"
         style={{
           gridTemplateColumns: `repeat(${BOARD_WIDTH}, 1fr)`,
@@ -71,23 +71,26 @@ export function BoardGrid({
           const pieceId = board.piecePositions[key];
           const piece = pieceId ? board.pieces[pieceId] : null;
           const isHighlighted = highlightedSet.has(key);
+          const isOwnedPiece = piece && piece.ownerId === playerId;
           const canPlace = isPreparation && isPlayerSide && !piece;
+          const canInteract = isPreparation && isOwnedPiece;
 
           return (
             <motion.div
               key={key}
               className={`
                 relative aspect-square rounded-lg border-2 transition-all duration-200
-                ${isPlayerSide 
-                  ? 'bg-stone-800/60 border-stone-600/50' 
-                  : 'bg-stone-900/40 border-stone-700/30'
+                ${
+                  isPlayerSide
+                    ? 'bg-stone-800/60 border-stone-600/50'
+                    : 'bg-stone-900/40 border-stone-700/30'
                 }
                 ${isHighlighted ? 'bg-amber-500/30 border-amber-400' : ''}
                 ${canPlace && !piece ? 'hover:bg-amber-500/20 hover:border-amber-500/50 cursor-pointer' : ''}
                 ${!isPlayerSide && isPreparation ? 'cursor-not-allowed opacity-50' : ''}
               `}
               onClick={() => {
-                if (piece) {
+                if (piece && (canInteract || !isPreparation)) {
                   onPieceClick(piece.id);
                 } else if (canPlace) {
                   onTileClick(position);

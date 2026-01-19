@@ -9,7 +9,7 @@ export interface Position {
 }
 
 // ==================== UNIT TYPES ====================
-export type UnitTypeId = 
+export type UnitTypeId =
   | 'infantry'
   | 'engineer'
   | 'armored_car'
@@ -18,33 +18,28 @@ export type UnitTypeId =
   | 'anti_air'
   | 'aircraft';
 
-export type AttackType = 
-  | 'melee'           // Single target melee
-  | 'ranged'          // Single target ranged
-  | 'aoe_radius'      // Radius AOE
-  | 'line_sweep';     // Line sweep
+export type AttackType =
+  | 'melee' // Single target melee
+  | 'ranged' // Single target ranged
+  | 'aoe_radius' // Radius AOE
+  | 'line_sweep'; // Line sweep
 
-export type TraitType = 
-  | 'infantry'
-  | 'engineer'
-  | 'armor'
-  | 'artillery'
-  | 'air';
+export type TraitType = 'infantry' | 'engineer' | 'armor' | 'artillery' | 'air';
 
 // ==================== TRAITS ====================
-export type TraitId = 
-  | 'armor_pierce'   // Armor Pierce
-  | 'blitz'          // Blitz
-  | 'heavy_cannon'   // Heavy Cannon
-  | 'sniper'         // Sniper
-  | 'tenacity';      // Tenacity
+export type TraitId =
+  | 'armor_pierce' // Armor Pierce
+  | 'blitz' // Blitz
+  | 'heavy_cannon' // Heavy Cannon
+  | 'sniper' // Sniper
+  | 'tenacity'; // Tenacity
 
 export interface Trait {
   id: TraitId;
   name: string;
   description: string;
-  level: number;  // 1-3 based on star level
-  applicableTo: UnitTypeId[];  // Which units can have this trait
+  level: number; // 1-3 based on star level
+  applicableTo: UnitTypeId[]; // Which units can have this trait
 }
 
 // ==================== UNIT DEFINITION ====================
@@ -56,7 +51,7 @@ export interface UnitDefinition {
   baseAttackMin: number;
   baseAttackMax: number;
   baseDefense: number;
-  baseSpeed: number;  // 0 = cannot move
+  baseSpeed: number; // 0 = cannot move
   baseRange: number;
   attackType: AttackType;
   isAirUnit: boolean;
@@ -71,9 +66,9 @@ export interface Piece {
   typeId: UnitTypeId;
   ownerId: string;
   matchId: string;
-  
+
   // Stats
-  level: number;  // 1, 2, or 3 stars
+  level: number; // 1, 2, or 3 stars
   currentHp: number;
   maxHp: number;
   attack: number;
@@ -82,34 +77,28 @@ export interface Piece {
   defense: number;
   speed: number;
   range: number;
-  
+
   // Position
-  position: Position | null;  // null if on bench
+  position: Position | null; // null if on bench
   isOnBoard: boolean;
   benchSlot: number | null;
-  
+
   // Combat state
   status: PieceStatus;
   facingUp: boolean;
-  
+
   // Traits
   traits: PieceTrait[];
-  
+
   // Fortification - only for units that received engineer buff
   fortification?: Fortification;
 }
 
-export type PieceStatus = 
-  | 'idle'
-  | 'wandering'
-  | 'moving'
-  | 'attacking'
-  | 'dying'
-  | 'dead';
+export type PieceStatus = 'idle' | 'wandering' | 'moving' | 'attacking' | 'dying' | 'dead';
 
 export interface PieceTrait {
   traitId: TraitId;
-  level: number;  // Stacks based on star level, max = current star level
+  level: number; // Stacks based on star level, max = current star level
 }
 
 export interface Fortification {
@@ -120,7 +109,7 @@ export interface Fortification {
 // ==================== BOARD STATE ====================
 export interface BoardState {
   pieces: Record<string, Piece>;
-  piecePositions: Record<string, string>;  // "x,y" -> pieceId
+  piecePositions: Record<string, string>; // "x,y" -> pieceId
   size: { width: number; height: number };
 }
 
@@ -137,7 +126,7 @@ export interface Synergy {
 export interface SynergyEffect {
   stat?: keyof Pick<Piece, 'defense' | 'speed' | 'attack'>;
   value?: number;
-  special?: string;  // Special effects like "fortification_buff" or "dodge_chance"
+  special?: string; // Special effects like "fortification_buff" or "dodge_chance"
 }
 
 export interface ActiveSynergy {
@@ -165,18 +154,18 @@ export interface Player {
   id: string;
   matchId: string;
   name: string;
-  
+
   // Resources
   hp: number;
   money: number;
   level: number;
-  
+
   // Status
   isReady: boolean;
   isAlive: boolean;
   isBot: boolean;
   placement: number | null;
-  
+
   // Streaks
   winStreak: number;
   loseStreak: number;
@@ -184,17 +173,14 @@ export interface Player {
 }
 
 // ==================== MATCH ====================
-export type MatchStatus = 
-  | 'waiting'      // Waiting for players
-  | 'starting'     // About to start
-  | 'preparation'  // Preparation phase
-  | 'battle'       // Battle phase
-  | 'finished';    // Game over
+export type MatchStatus =
+  | 'waiting' // Waiting for players
+  | 'starting' // About to start
+  | 'preparation' // Preparation phase
+  | 'battle' // Battle phase
+  | 'finished'; // Game over
 
-export type GamePhase = 
-  | 'preparation'
-  | 'battle'
-  | 'settlement';
+export type GamePhase = 'preparation' | 'battle' | 'settlement';
 
 export interface Match {
   matchId: string;
@@ -214,13 +200,13 @@ export interface BattlePairing {
 }
 
 export interface BattleResult {
-  winnerId: string | null;  // null for draw
+  winnerId: string | null; // null for draw
   loserId: string | null;
   winnerSurvivors: number;
   loserSurvivors: number;
   damageDealt: number;
   isDraw: boolean;
-  player1Id?: string;  // For draw handling
+  player1Id?: string; // For draw handling
   player2Id?: string;
 }
 
@@ -249,7 +235,7 @@ export interface PieceCombatInfo {
 }
 
 // ==================== AI BOT ====================
-export type BotActionType = 
+export type BotActionType =
   | 'BUY'
   | 'SELL'
   | 'MOVE'
@@ -289,32 +275,135 @@ export interface StarUpgrade {
 
 export const STAR_UPGRADES: Record<UnitTypeId, { star2: StarUpgrade; star3: StarUpgrade }> = {
   infantry: {
-    star2: { hpBonus: 1, attackMinBonus: 0, attackMaxBonus: 1, defenseBonus: 0, speedBonus: 0, rangeBonus: 0 },
-    star3: { hpBonus: 1, attackMinBonus: 1, attackMaxBonus: 0, defenseBonus: 0, speedBonus: 0, rangeBonus: 0 },
+    star2: {
+      hpBonus: 1,
+      attackMinBonus: 0,
+      attackMaxBonus: 1,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 0,
+    },
+    star3: {
+      hpBonus: 1,
+      attackMinBonus: 1,
+      attackMaxBonus: 0,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 0,
+    },
   },
   engineer: {
-    star2: { hpBonus: 0, attackMinBonus: 0, attackMaxBonus: 0, defenseBonus: 0, speedBonus: 0, rangeBonus: 0, special: 'fortification_armor+1_duration+1' },
-    star3: { hpBonus: 0, attackMinBonus: 0, attackMaxBonus: 0, defenseBonus: 0, speedBonus: 0, rangeBonus: 0, special: 'fortification_armor+1_duration+1' },
+    star2: {
+      hpBonus: 0,
+      attackMinBonus: 0,
+      attackMaxBonus: 0,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 0,
+      special: 'fortification_armor+1_duration+1',
+    },
+    star3: {
+      hpBonus: 0,
+      attackMinBonus: 0,
+      attackMaxBonus: 0,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 0,
+      special: 'fortification_armor+1_duration+1',
+    },
   },
   armored_car: {
-    star2: { hpBonus: 1, attackMinBonus: 0, attackMaxBonus: 0, defenseBonus: 0, speedBonus: 1, rangeBonus: 0 },
-    star3: { hpBonus: 1, attackMinBonus: 0, attackMaxBonus: 0, defenseBonus: 1, speedBonus: 0, rangeBonus: 0 },
+    star2: {
+      hpBonus: 1,
+      attackMinBonus: 0,
+      attackMaxBonus: 0,
+      defenseBonus: 0,
+      speedBonus: 1,
+      rangeBonus: 0,
+    },
+    star3: {
+      hpBonus: 1,
+      attackMinBonus: 0,
+      attackMaxBonus: 0,
+      defenseBonus: 1,
+      speedBonus: 0,
+      rangeBonus: 0,
+    },
   },
   tank: {
-    star2: { hpBonus: 2, attackMinBonus: 1, attackMaxBonus: 1, defenseBonus: 0, speedBonus: 0, rangeBonus: 0 },
-    star3: { hpBonus: 2, attackMinBonus: 0, attackMaxBonus: 0, defenseBonus: 1, speedBonus: 0, rangeBonus: 0 },
+    star2: {
+      hpBonus: 2,
+      attackMinBonus: 1,
+      attackMaxBonus: 1,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 0,
+    },
+    star3: {
+      hpBonus: 2,
+      attackMinBonus: 0,
+      attackMaxBonus: 0,
+      defenseBonus: 1,
+      speedBonus: 0,
+      rangeBonus: 0,
+    },
   },
   artillery: {
-    star2: { hpBonus: 0, attackMinBonus: 1, attackMaxBonus: 1, defenseBonus: 0, speedBonus: 0, rangeBonus: 1 },
-    star3: { hpBonus: 0, attackMinBonus: 1, attackMaxBonus: 1, defenseBonus: 0, speedBonus: 0, rangeBonus: 0, special: 'aoe_radius+1' },
+    star2: {
+      hpBonus: 0,
+      attackMinBonus: 1,
+      attackMaxBonus: 1,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 1,
+    },
+    star3: {
+      hpBonus: 0,
+      attackMinBonus: 1,
+      attackMaxBonus: 1,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 0,
+      special: 'aoe_radius+1',
+    },
   },
   anti_air: {
-    star2: { hpBonus: 1, attackMinBonus: 0, attackMaxBonus: 0, defenseBonus: 0, speedBonus: 0, rangeBonus: 0, special: 'anti_air_damage+1' },
-    star3: { hpBonus: 0, attackMinBonus: 0, attackMaxBonus: 0, defenseBonus: 0, speedBonus: 0, rangeBonus: 1, special: 'anti_air_damage+1' },
+    star2: {
+      hpBonus: 1,
+      attackMinBonus: 0,
+      attackMaxBonus: 0,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 0,
+      special: 'anti_air_damage+1',
+    },
+    star3: {
+      hpBonus: 0,
+      attackMinBonus: 0,
+      attackMaxBonus: 0,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 1,
+      special: 'anti_air_damage+1',
+    },
   },
   aircraft: {
-    star2: { hpBonus: 1, attackMinBonus: 1, attackMaxBonus: 1, defenseBonus: 0, speedBonus: 0, rangeBonus: 0 },
-    star3: { hpBonus: 1, attackMinBonus: 0, attackMaxBonus: 0, defenseBonus: 0, speedBonus: 0, rangeBonus: 0, special: 'sweep_width+1' },
+    star2: {
+      hpBonus: 1,
+      attackMinBonus: 1,
+      attackMaxBonus: 1,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 0,
+    },
+    star3: {
+      hpBonus: 1,
+      attackMinBonus: 0,
+      attackMaxBonus: 0,
+      defenseBonus: 0,
+      speedBonus: 0,
+      rangeBonus: 0,
+      special: 'sweep_width+1',
+    },
   },
 };
-

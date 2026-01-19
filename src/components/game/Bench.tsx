@@ -32,7 +32,7 @@ export function Bench({
           ({pieces.length}/{BENCH_SIZE})
         </span>
       </div>
-      
+
       <div className="flex gap-2">
         {slots.map((piece, index) => (
           <motion.div
@@ -41,9 +41,10 @@ export function Bench({
               w-16 h-20 rounded-lg border-2 border-dashed
               flex items-center justify-center
               transition-colors duration-200
-              ${piece 
-                ? 'border-transparent bg-transparent' 
-                : 'border-stone-600 bg-stone-900/50 hover:border-amber-500/50 hover:bg-amber-500/10 cursor-pointer'
+              ${
+                piece
+                  ? 'border-transparent bg-transparent'
+                  : 'border-stone-600 bg-stone-900/50 hover:border-amber-500/50 hover:bg-amber-500/10 cursor-pointer'
               }
             `}
             onClick={() => {

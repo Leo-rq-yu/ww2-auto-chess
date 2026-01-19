@@ -32,22 +32,27 @@ export function Shop({
       <div className="flex items-center justify-between p-3 border-b border-stone-700">
         <div className="flex items-center gap-3">
           <h3 className="text-amber-400 font-bold text-lg">Shop</h3>
-          
+
           {/* Lock Button */}
           <button
             onClick={onToggleLock}
             className={`
               p-1.5 rounded-lg transition-all duration-200
-              ${isLocked 
-                ? 'bg-amber-500/30 text-amber-400 ring-2 ring-amber-500/50' 
-                : 'bg-stone-700 text-stone-400 hover:text-stone-200 hover:bg-stone-600'
+              ${
+                isLocked
+                  ? 'bg-amber-500/30 text-amber-400 ring-2 ring-amber-500/50'
+                  : 'bg-stone-700 text-stone-400 hover:text-stone-200 hover:bg-stone-600'
               }
             `}
-            title={isLocked ? 'Unlock Shop (cards will refresh next round)' : 'Lock Shop (keep these cards)'}
+            title={
+              isLocked
+                ? 'Unlock Shop (cards will refresh next round)'
+                : 'Lock Shop (keep these cards)'
+            }
           >
             {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
           </button>
-          
+
           {isLocked && (
             <span className="text-xs text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
               Locked
@@ -82,11 +87,11 @@ export function Shop({
                 initial={{ opacity: 0, y: 20, scale: 0.8 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ 
-                  type: 'spring', 
-                  stiffness: 400, 
+                transition={{
+                  type: 'spring',
+                  stiffness: 400,
                   damping: 25,
-                  delay: index * 0.03 
+                  delay: index * 0.03,
                 }}
                 onMouseEnter={() => !card.purchased && setHoveredCard(card)}
                 onMouseLeave={() => setHoveredCard(null)}
@@ -116,10 +121,7 @@ export function Shop({
       </div>
 
       {/* Unit Detail Card - Shows on hover */}
-      <UnitDetailCard 
-        shopCard={hoveredCard} 
-        visible={!!hoveredCard}
-      />
+      <UnitDetailCard shopCard={hoveredCard} visible={!!hoveredCard} />
     </div>
   );
 }

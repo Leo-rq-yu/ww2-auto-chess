@@ -11,8 +11,19 @@ import {
   BENCH_SIZE,
 } from '../types';
 import { UNIT_DEFINITIONS } from '../types/units';
-import { createShopState, createPieceFromCard, findMergeCandidates, canMerge, mergePieces } from './shop';
-import { addPieceToBoard, getPiecesByOwner, getEmptyPositions, removePieceFromBoard } from './board';
+import {
+  createShopState,
+  createPieceFromCard,
+  findMergeCandidates,
+  canMerge,
+  mergePieces,
+} from './shop';
+import {
+  addPieceToBoard,
+  getPiecesByOwner,
+  getEmptyPositions,
+  removePieceFromBoard,
+} from './board';
 import { getSynergyProgress } from './synergy';
 import { getUnitCap, calculateSellPrice } from './economy';
 
@@ -59,7 +70,7 @@ const WEIGHTS = {
 export class BotBrain {
   private state: BotState;
 
-  constructor(state: BotState, _seed?: number) {
+  constructor(state: BotState) {
     this.state = state;
   }
 
@@ -273,7 +284,7 @@ export class BotBrain {
     const actions: BotAction[] = [];
     const { player, board, bench } = this.state;
 
-    const unitCap = getUnitCap(player.level);
+    const unitCap = getUnitCap();
     const currentOnBoard = getPiecesByOwner(board, player.id).length;
     const slotsAvailable = unitCap - currentOnBoard;
 
@@ -287,8 +298,7 @@ export class BotBrain {
     });
 
     // Get empty positions on player's half (bottom 3 rows: y = 3, 4, 5)
-    const emptyPositions = getEmptyPositions(board)
-      .filter(pos => pos.y >= BOARD_HEIGHT / 2);
+    const emptyPositions = getEmptyPositions(board).filter(pos => pos.y >= BOARD_HEIGHT / 2);
 
     // Deploy best pieces
     for (let i = 0; i < Math.min(slotsAvailable, sortedBench.length, emptyPositions.length); i++) {
@@ -303,9 +313,7 @@ export class BotBrain {
         });
 
         // Remove used position
-        const posIndex = emptyPositions.findIndex(
-          p => p.x === position.x && p.y === position.y
-        );
+        const posIndex = emptyPositions.findIndex(p => p.x === position.x && p.y === position.y);
         if (posIndex !== -1) emptyPositions.splice(posIndex, 1);
       }
     }
@@ -404,10 +412,7 @@ export class BotBrain {
 // Bot Action Executor
 // =============================================
 
-export function executeBotAction(
-  action: BotAction,
-  state: BotState
-): BotState {
+export function executeBotAction(action: BotAction, state: BotState): BotState {
   const newState = { ...state };
 
   switch (action.type) {
@@ -419,11 +424,7 @@ export function executeBotAction(
       if (state.bench.length >= BENCH_SIZE) break;
 
       // Create piece from card
-      const piece = createPieceFromCard(
-        card,
-        state.player.id,
-        state.player.matchId
-      );
+      const piece = createPieceFromCard(card, state.player.id, state.player.matchId);
 
       // Find empty bench slot
       const usedSlots = new Set(state.bench.map(p => p.benchSlot));
@@ -589,31 +590,42 @@ export function generateBotSystemPrompt(state: BotState): string {
 - HP: ${player.hp}/50
 - Gold: ${player.money}
 - Level: ${player.level}
-- Unit Cap: ${getUnitCap(player.level)}
+- Unit Cap: ${getUnitCap()}
 
 ## All Players
 ${allPlayers.map(p => `- ${p.name}: HP=${p.hp}, Gold=${p.money}, ${p.isAlive ? 'Alive' : 'Eliminated'}`).join('\n')}
 
 ## Board Units
-${Object.values(board.pieces).filter(p => p.ownerId === player.id).map(p => {
-  const def = UNIT_DEFINITIONS[p.typeId];
-  const traitNames = p.traits?.map(t => t.traitId).join(',') || '';
-  return `- ${def?.name || p.typeId} ★${p.level} Pos(${p.position?.x},${p.position?.y}) Traits:[${traitNames}]`;
-}).join('\n') || 'None'}
+${
+  Object.values(board.pieces)
+    .filter(p => p.ownerId === player.id)
+    .map(p => {
+      const def = UNIT_DEFINITIONS[p.typeId];
+      const traitNames = p.traits?.map(t => t.traitId).join(',') || '';
+      return `- ${def?.name || p.typeId} ★${p.level} Pos(${p.position?.x},${p.position?.y}) Traits:[${traitNames}]`;
+    })
+    .join('\n') || 'None'
+}
 
 ## Bench Units
-${bench.map(p => {
-  const def = UNIT_DEFINITIONS[p.typeId];
-  const traitNames = p.traits?.map(t => t.traitId).join(',') || '';
-  return `- ${def?.name || p.typeId} ★${p.level} Traits:[${traitNames}]`;
-}).join('\n') || 'None'}
+${
+  bench
+    .map(p => {
+      const def = UNIT_DEFINITIONS[p.typeId];
+      const traitNames = p.traits?.map(t => t.traitId).join(',') || '';
+      return `- ${def?.name || p.typeId} ★${p.level} Traits:[${traitNames}]`;
+    })
+    .join('\n') || 'None'
+}
 
 ## Shop Cards
-${shop.cards.map((c, i) => {
-  const def = UNIT_DEFINITIONS[c.typeId];
-  const traitNames = c.traits?.map(t => t.traitId).join(',') || '';
-  return `${i}: ${def?.name || c.typeId} ★1 Cost${c.cost} ${c.purchased ? '(Sold)' : ''} Traits:[${traitNames}]`;
-}).join('\n')}
+${shop.cards
+  .map((c, i) => {
+    const def = UNIT_DEFINITIONS[c.typeId];
+    const traitNames = c.traits?.map(t => t.traitId).join(',') || '';
+    return `${i}: ${def?.name || c.typeId} ★1 Cost${c.cost} ${c.purchased ? '(Sold)' : ''} Traits:[${traitNames}]`;
+  })
+  .join('\n')}
 
 # Available Commands
 - BUY shop_index: Buy card at slot N
@@ -629,4 +641,3 @@ Return your decision commands, one per line.`;
 }
 
 export default BotBrain;
-

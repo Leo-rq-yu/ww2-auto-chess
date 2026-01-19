@@ -23,7 +23,7 @@ export function PlayerList({ players, currentPlayerId, onPlayerClick }: PlayerLi
         {sortedPlayers.map((player, index) => {
           const isCurrentPlayer = player.id === currentPlayerId;
           const isAlive = player.isAlive && player.hp > 0;
-          
+
           return (
             <motion.div
               key={player.id}
@@ -34,21 +34,29 @@ export function PlayerList({ players, currentPlayerId, onPlayerClick }: PlayerLi
               className={`
                 flex items-center gap-2 p-2 rounded-lg cursor-pointer
                 transition-all duration-200
-                ${isCurrentPlayer 
-                  ? 'bg-amber-500/20 border border-amber-500/50' 
-                  : 'bg-stone-900/50 hover:bg-stone-700/50 border border-transparent'
+                ${
+                  isCurrentPlayer
+                    ? 'bg-amber-500/20 border border-amber-500/50'
+                    : 'bg-stone-900/50 hover:bg-stone-700/50 border border-transparent'
                 }
                 ${!isAlive ? 'opacity-50 grayscale' : ''}
               `}
             >
               {/* Rank */}
-              <div className={`
+              <div
+                className={`
                 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-                ${index === 0 ? 'bg-amber-500 text-stone-900' : 
-                  index === 1 ? 'bg-stone-400 text-stone-900' :
-                  index === 2 ? 'bg-amber-700 text-white' :
-                  'bg-stone-700 text-stone-400'}
-              `}>
+                ${
+                  index === 0
+                    ? 'bg-amber-500 text-stone-900'
+                    : index === 1
+                      ? 'bg-stone-400 text-stone-900'
+                      : index === 2
+                        ? 'bg-amber-700 text-white'
+                        : 'bg-stone-700 text-stone-400'
+                }
+              `}
+              >
                 {isAlive ? index + 1 : <Skull size={12} />}
               </div>
 
@@ -60,30 +68,26 @@ export function PlayerList({ players, currentPlayerId, onPlayerClick }: PlayerLi
                   ) : (
                     <User size={12} className="text-blue-400" />
                   )}
-                  <span className={`
+                  <span
+                    className={`
                     text-sm font-medium truncate
                     ${isCurrentPlayer ? 'text-amber-400' : 'text-stone-200'}
-                  `}>
+                  `}
+                  >
                     {player.name}
                     {isCurrentPlayer && ' (You)'}
                   </span>
-                  {index === 0 && isAlive && (
-                    <Crown size={12} className="text-amber-400" />
-                  )}
+                  {index === 0 && isAlive && <Crown size={12} className="text-amber-400" />}
                 </div>
 
                 {/* Streaks */}
                 {(player.winStreak > 0 || player.loseStreak > 0) && (
                   <div className="flex gap-1 mt-0.5">
                     {player.winStreak > 0 && (
-                      <span className="text-[10px] text-green-400">
-                        🔥 {player.winStreak} Win
-                      </span>
+                      <span className="text-[10px] text-green-400">🔥 {player.winStreak} Win</span>
                     )}
                     {player.loseStreak > 0 && (
-                      <span className="text-[10px] text-red-400">
-                        💔 {player.loseStreak} Loss
-                      </span>
+                      <span className="text-[10px] text-red-400">💔 {player.loseStreak} Loss</span>
                     )}
                   </div>
                 )}
@@ -91,15 +95,17 @@ export function PlayerList({ players, currentPlayerId, onPlayerClick }: PlayerLi
 
               {/* Stats - HP only (money not real-time for other players) */}
               <div className="flex items-center gap-1">
-                <Heart 
-                  size={12} 
-                  className={player.hp > 25 ? 'text-red-400' : 'text-red-600'} 
+                <Heart
+                  size={12}
+                  className={player.hp > 25 ? 'text-red-400' : 'text-red-600'}
                   fill={player.hp > 0 ? 'currentColor' : 'none'}
                 />
-                <span className={`
+                <span
+                  className={`
                   text-xs font-bold
                   ${player.hp > 25 ? 'text-red-400' : 'text-red-600'}
-                `}>
+                `}
+                >
                   {player.hp}
                 </span>
               </div>
@@ -117,4 +123,3 @@ export function PlayerList({ players, currentPlayerId, onPlayerClick }: PlayerLi
 }
 
 export default PlayerList;
-

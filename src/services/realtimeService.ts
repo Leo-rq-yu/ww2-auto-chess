@@ -114,19 +114,18 @@ class RealtimeService {
       console.log('[Realtime] Connected');
 
       // Set up connection event handlers
-      insforge.realtime.on('disconnect', (reason) => {
+      insforge.realtime.on('disconnect', reason => {
         console.log('[Realtime] Disconnected:', reason);
         this.connected = false;
       });
 
-      insforge.realtime.on('connect_error', (err) => {
+      insforge.realtime.on('connect_error', err => {
         console.error('[Realtime] Connection error:', err);
       });
 
       insforge.realtime.on('error', ({ code, message }) => {
         console.error('[Realtime] Error:', code, message);
       });
-
     } catch (error) {
       console.error('[Realtime] Failed to connect:', error);
       throw error;
@@ -195,11 +194,16 @@ class RealtimeService {
     });
 
     // Listen for custom phase change events
-    insforge.realtime.on('phase_change', (payload: { match_id: string; phase: string; turn_number: number }) => {
-      if (payload.match_id === matchId) {
-        this.phaseChangeHandlers.get(matchId)?.forEach(h => h(payload.phase, payload.turn_number));
+    insforge.realtime.on(
+      'phase_change',
+      (payload: { match_id: string; phase: string; turn_number: number }) => {
+        if (payload.match_id === matchId) {
+          this.phaseChangeHandlers
+            .get(matchId)
+            ?.forEach(h => h(payload.phase, payload.turn_number));
+        }
       }
-    });
+    );
 
     // Listen for all players ready event
     insforge.realtime.on('all_players_ready', (payload: { match_id: string }) => {
@@ -209,11 +213,14 @@ class RealtimeService {
     });
 
     // Listen for battle start event
-    insforge.realtime.on('battle_start', (payload: { match_id: string; pairings: { player1Id: string; player2Id: string }[] }) => {
-      if (payload.match_id === matchId) {
-        this.battleStartHandlers.get(matchId)?.forEach(h => h(payload.pairings));
+    insforge.realtime.on(
+      'battle_start',
+      (payload: { match_id: string; pairings: { player1Id: string; player2Id: string }[] }) => {
+        if (payload.match_id === matchId) {
+          this.battleStartHandlers.get(matchId)?.forEach(h => h(payload.pairings));
+        }
       }
-    });
+    );
 
     // Listen for battle result event
     insforge.realtime.on('battle_result', (payload: { match_id: string; result: unknown }) => {
@@ -223,24 +230,41 @@ class RealtimeService {
     });
 
     // Listen for player ready event (from humans and bots)
-    insforge.realtime.on('player_ready', (payload: { match_id?: string; player_id?: string; is_ready?: boolean; isBot?: boolean; is_bot?: boolean }) => {
-      const targetMatchId = payload.match_id || matchId;
-      const playerId = payload.player_id;
-      const isReady = payload.is_ready ?? false;
-      const isBot = payload.is_bot ?? payload.isBot ?? false;
-      
-      if (targetMatchId === matchId && playerId) {
-        this.playerReadyHandlers.get(matchId)?.forEach(h => h(playerId, isReady, isBot));
+    insforge.realtime.on(
+      'player_ready',
+      (payload: {
+        match_id?: string;
+        player_id?: string;
+        is_ready?: boolean;
+        isBot?: boolean;
+        is_bot?: boolean;
+      }) => {
+        const targetMatchId = payload.match_id || matchId;
+        const playerId = payload.player_id;
+        const isReady = payload.is_ready ?? false;
+        const isBot = payload.is_bot ?? payload.isBot ?? false;
+
+        if (targetMatchId === matchId && playerId) {
+          this.playerReadyHandlers.get(matchId)?.forEach(h => h(playerId, isReady, isBot));
+        }
       }
-    });
+    );
 
     // Listen for bot action events
-    insforge.realtime.on('bot_action', (payload: { match_id?: string; botId: string; actionType: string; [key: string]: unknown }) => {
-      const targetMatchId = payload.match_id || matchId;
-      if (targetMatchId === matchId) {
-        this.botActionHandlers.get(matchId)?.forEach(h => h(payload.botId, payload));
+    insforge.realtime.on(
+      'bot_action',
+      (payload: {
+        match_id?: string;
+        botId: string;
+        actionType: string;
+        [key: string]: unknown;
+      }) => {
+        const targetMatchId = payload.match_id || matchId;
+        if (targetMatchId === matchId) {
+          this.botActionHandlers.get(matchId)?.forEach(h => h(payload.botId, payload));
+        }
       }
-    });
+    );
 
     // Listen for battle results from Edge Function
     insforge.realtime.on('battle_results', (payload: BattleResultsPayload) => {
@@ -471,7 +495,12 @@ class RealtimeService {
     await insforge.realtime.publish(channel, 'battle_results', payload);
   }
 
-  async publishBoardUpdate(matchId: string, playerId: string, boardState: unknown, benchState: unknown) {
+  async publishBoardUpdate(
+    matchId: string,
+    playerId: string,
+    boardState: unknown,
+    benchState: unknown
+  ) {
     const channel = `board:${matchId}:${playerId}`;
     await insforge.realtime.publish(channel, 'board_update', {
       match_id: matchId,

@@ -16,8 +16,14 @@ const traitIcons: Record<string, typeof Shield> = {
 
 const traitColors: Record<string, { active: string; inactive: string }> = {
   infantry: { active: 'text-blue-400 bg-blue-500/20', inactive: 'text-stone-500 bg-stone-700/50' },
-  engineer: { active: 'text-amber-400 bg-amber-500/20', inactive: 'text-stone-500 bg-stone-700/50' },
-  armor: { active: 'text-emerald-400 bg-emerald-500/20', inactive: 'text-stone-500 bg-stone-700/50' },
+  engineer: {
+    active: 'text-amber-400 bg-amber-500/20',
+    inactive: 'text-stone-500 bg-stone-700/50',
+  },
+  armor: {
+    active: 'text-emerald-400 bg-emerald-500/20',
+    inactive: 'text-stone-500 bg-stone-700/50',
+  },
   artillery: { active: 'text-red-400 bg-red-500/20', inactive: 'text-stone-500 bg-stone-700/50' },
   air: { active: 'text-purple-400 bg-purple-500/20', inactive: 'text-stone-500 bg-stone-700/50' },
 };
@@ -26,7 +32,7 @@ export function SynergyPanel({ synergies }: SynergyPanelProps) {
   // Sort: active first, then by progress
   const sortedSynergies = [...synergies].sort((a, b) => {
     if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
-    return (b.currentCount / b.triggerCount) - (a.currentCount / a.triggerCount);
+    return b.currentCount / b.triggerCount - a.currentCount / a.triggerCount;
   });
 
   return (
@@ -34,7 +40,7 @@ export function SynergyPanel({ synergies }: SynergyPanelProps) {
       <h3 className="text-amber-400 font-bold text-sm mb-2">Synergies</h3>
 
       <div className="space-y-2">
-        {sortedSynergies.map((synergy) => {
+        {sortedSynergies.map(synergy => {
           const Icon = traitIcons[synergy.traitType] || Shield;
           const colors = traitColors[synergy.traitType] || traitColors.infantry;
           const progress = synergy.currentCount / synergy.triggerCount;
@@ -46,31 +52,34 @@ export function SynergyPanel({ synergies }: SynergyPanelProps) {
               animate={{ opacity: 1, scale: 1 }}
               className={`
                 relative p-2 rounded-lg border transition-all duration-300
-                ${synergy.isActive 
-                  ? `${colors.active} border-current` 
-                  : `${colors.inactive} border-transparent`
+                ${
+                  synergy.isActive
+                    ? `${colors.active} border-current`
+                    : `${colors.inactive} border-transparent`
                 }
               `}
             >
               <div className="flex items-center gap-2">
                 {/* Icon */}
-                <div className={`
+                <div
+                  className={`
                   w-7 h-7 rounded-lg flex items-center justify-center
                   ${synergy.isActive ? 'bg-current/20' : 'bg-stone-600/50'}
-                `}>
+                `}
+                >
                   <Icon size={16} />
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold truncate">
-                      {synergy.name}
-                    </span>
-                    <span className={`
+                    <span className="text-xs font-semibold truncate">{synergy.name}</span>
+                    <span
+                      className={`
                       text-xs font-bold
                       ${synergy.isActive ? 'text-current' : 'text-stone-500'}
-                    `}>
+                    `}
+                    >
                       {synergy.currentCount}/{synergy.triggerCount}
                     </span>
                   </div>
@@ -87,9 +96,7 @@ export function SynergyPanel({ synergies }: SynergyPanelProps) {
 
                   {/* Description (on hover or when active) */}
                   {synergy.isActive && (
-                    <p className="text-[10px] mt-1 opacity-80 truncate">
-                      {synergy.description}
-                    </p>
+                    <p className="text-[10px] mt-1 opacity-80 truncate">{synergy.description}</p>
                   )}
                 </div>
               </div>
@@ -113,4 +120,3 @@ export function SynergyPanel({ synergies }: SynergyPanelProps) {
 }
 
 export default SynergyPanel;
-

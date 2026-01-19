@@ -13,10 +13,10 @@ import { v4 as uuidv4 } from 'uuid';
 // Available AI models for bots - distributed across providers to reduce load
 // Models configured in InsForge AI Gateway
 const AI_MODELS = [
-  'x-ai/grok-4.1-fast',          // Grok 4.1 Fast
-  'openai/gpt-5-mini',          // GPT-4o Mini
-  'anthropic/claude-3.5-haiku',  // Claude 3.5 Haiku
-  'openai/gpt-4o',               // GPT-4o
+  'x-ai/grok-4.1-fast', // Grok 4.1 Fast
+  'openai/gpt-5-mini', // GPT-4o Mini
+  'anthropic/claude-3.5-haiku', // Claude 3.5 Haiku
+  'openai/gpt-4o', // GPT-4o
 ];
 
 // Track which model each bot uses
@@ -54,8 +54,8 @@ const BOT_SYSTEM_PROMPT = `You are an AI player in a WW2 Auto-Chess game. Make o
 - Armored Car (2 cost): Fast movement, good for flanking
 - Tank (3 cost): Heavy armor, high attack
 - Artillery (3 cost): Ranged attack, area damage
-- Anti-Air (4 cost): Anti-aircraft specialty
-- Aircraft (5 cost): High mobility, can cross terrain
+- Anti-Air (2 cost): Anti-aircraft specialty
+- Aircraft (3 cost): High mobility, can cross terrain
 
 ## Synergy Effects
 - Infantry synergy (3): All units +10% attack
@@ -65,10 +65,12 @@ const BOT_SYSTEM_PROMPT = `You are an AI player in a WW2 Auto-Chess game. Make o
 - Air Force synergy (2): Evasion +10%
 
 ## Decision Principles
-1. Prioritize units that complete synergies
-2. Maintain healthy economy
-3. Adapt to opponent compositions
-4. Deploy wisely: tanks front, damage dealers back
+1. **CRITICAL RULE: If you have NO units on the board (currentBoardCount = 0), you MUST buy at least one unit AND deploy it! Having zero units means automatic loss!**
+2. Always try to have at least 1-2 units on the board
+3. Prioritize units that complete synergies
+4. Maintain healthy economy (but NOT at the cost of having zero units!)
+5. Adapt to opponent compositions
+6. Deploy wisely: tanks front, damage dealers back
 
 ## Output Format
 Return JSON with a series of actions:
@@ -87,6 +89,8 @@ Notes:
 - cardIndex is shop card index (0-4)
 - position.x range 0-5, position.y range 3-5 (your half)
 - Last action should be READY
+- **IMPORTANT: If currentBoardCount is 0, your actions MUST include at least one BUY followed by a DEPLOY!**
+- After BUY, use the piece id from benchUnits to DEPLOY
 - Don't buy if insufficient gold`;
 
 // Bot state stored in memory (not database)
@@ -122,10 +126,12 @@ export function initializeBot(matchId: string, botPlayer: Player): void {
   };
 
   botMemoryStates.get(matchId)!.set(botPlayer.id, state);
-  
+
   // Assign a random AI model to this bot
   const assignedModel = assignModelToBot(botPlayer.id);
-  console.log(`[Bot] Initialized bot ${botPlayer.name} for match ${matchId} with model: ${assignedModel}`);
+  console.log(
+    `[Bot] Initialized bot ${botPlayer.name} for match ${matchId} with model: ${assignedModel}`
+  );
 }
 
 // Get bot state from memory
@@ -193,7 +199,6 @@ export async function runBotAIDecision(matchId: string, botId: string): Promise<
       // Small delay between actions
       await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
     }
-
   } catch (error) {
     console.error(`[Bot ${botState.playerName}] AI decision error:`, error);
     // Fallback: just mark as ready
@@ -212,7 +217,7 @@ function buildGameContext(matchId: string, botId: string): object {
     matchShops = new Map();
     botShops.set(matchId, matchShops);
   }
-  
+
   let shop = matchShops.get(botId);
   if (!shop) {
     shop = generateShopForBot(botState.level);
@@ -221,7 +226,7 @@ function buildGameContext(matchId: string, botId: string): object {
 
   // Get all bots in match for opponent info
   const allBots = botMemoryStates.get(matchId);
-  const opponents = allBots 
+  const opponents = allBots
     ? Array.from(allBots.values())
         .filter(b => b.playerId !== botId && b.isAlive)
         .map(b => ({ name: b.playerName, hp: b.hp, level: b.level }))
@@ -244,7 +249,7 @@ function buildGameContext(matchId: string, botId: string): object {
         level: p.level,
         position: p.position,
       })),
-      unitCap: getUnitCapForLevel(botState.level),
+      unitCap: getUnitCapForLevel(),
       currentBoardCount: Object.keys(botState.board.pieces).length,
     },
     shop: shop.map((card, index) => ({
@@ -263,13 +268,22 @@ function buildGameContext(matchId: string, botId: string): object {
   };
 }
 
-// Generate shop cards for bot (simplified)
-function generateShopForBot(_level: number): ShopCard[] {
+// Generate shop cards for bot (simplified, uses level for future weighted distribution)
+function generateShopForBot(level: number): ShopCard[] {
   const unitTypes = Object.keys(UNIT_DEFINITIONS) as UnitTypeId[];
   const cards: ShopCard[] = [];
 
+  // Use level to bias towards appropriate cost units (higher level = more expensive units available)
+  const maxCostForLevel = Math.min(3, Math.ceil(level / 3));
+
   for (let i = 0; i < 5; i++) {
-    const typeId = unitTypes[Math.floor(Math.random() * unitTypes.length)];
+    // Filter units by cost based on level
+    const availableUnits = unitTypes.filter(typeId => {
+      const def = UNIT_DEFINITIONS[typeId];
+      return def && def.cost <= maxCostForLevel;
+    });
+    const pool = availableUnits.length > 0 ? availableUnits : unitTypes;
+    const typeId = pool[Math.floor(Math.random() * pool.length)];
     const def = UNIT_DEFINITIONS[typeId];
     cards.push({
       index: i,
@@ -284,7 +298,7 @@ function generateShopForBot(_level: number): ShopCard[] {
 }
 
 // Get unit cap for level - no limit (matches economy.ts)
-function getUnitCapForLevel(_level: number): number {
+function getUnitCapForLevel(): number {
   return 99; // No limit
 }
 
@@ -374,17 +388,24 @@ async function executeActionViaRealtime(
 // Publish bot ready status and save board state to database
 async function publishBotReady(matchId: string, botId: string): Promise<void> {
   const state = getBotMemoryState(matchId, botId);
-  
+
   // Save bot's board state to database so Edge Function can access it
   if (state) {
     try {
-      await updateBoardState(matchId, botId, state.board as any, state.bench as any);
-      console.log(`[Bot ${botId}] Saved board state to database (${Object.keys(state.board.pieces).length} pieces)`);
+      await updateBoardState(
+        matchId,
+        botId,
+        state.board as unknown as Parameters<typeof updateBoardState>[2],
+        state.bench as unknown as Parameters<typeof updateBoardState>[3]
+      );
+      console.log(
+        `[Bot ${botId}] Saved board state to database (${Object.keys(state.board.pieces).length} pieces)`
+      );
     } catch (err) {
       console.error(`[Bot ${botId}] Failed to save board state:`, err);
     }
   }
-  
+
   await insforge.realtime.publish(`match:${matchId}`, 'player_ready', {
     match_id: matchId,
     player_id: botId,
@@ -408,7 +429,7 @@ function updateBotAfterBuy(matchId: string, botId: string, cardIndex: number): v
     matchShops = new Map();
     botShops.set(matchId, matchShops);
   }
-  
+
   let shop = matchShops.get(botId);
   if (!shop) {
     shop = generateShopForBot(state.level);
@@ -417,7 +438,9 @@ function updateBotAfterBuy(matchId: string, botId: string, cardIndex: number): v
 
   const card = shop[cardIndex];
   if (!card || card.purchased || state.money < card.cost) {
-    console.log(`[Bot ${botId}] Cannot buy card ${cardIndex} - purchased: ${card?.purchased}, money: ${state.money}, cost: ${card?.cost}`);
+    console.log(
+      `[Bot ${botId}] Cannot buy card ${cardIndex} - purchased: ${card?.purchased}, money: ${state.money}, cost: ${card?.cost}`
+    );
     return;
   }
 
@@ -431,7 +454,7 @@ function updateBotAfterBuy(matchId: string, botId: string, cardIndex: number): v
 
   // Get matchId from state (bots track this via memory)
   const matchShopsEntries = Array.from(botShops.entries());
-  const currentMatchId = matchShopsEntries.find(([_, shops]) => shops.has(botId))?.[0] || '';
+  const currentMatchId = matchShopsEntries.find(([, shops]) => shops.has(botId))?.[0] || '';
 
   const piece: Piece = {
     id: uuidv4(),
@@ -484,9 +507,9 @@ function updateBotAfterDeploy(
 function updateBotAfterRefresh(matchId: string, botId: string): void {
   const state = getBotMemoryState(matchId, botId);
   if (!state || state.money < 2) return;
-  
+
   state.money -= 2;
-  
+
   // Generate new shop
   const matchShops = botShops.get(matchId);
   if (matchShops) {
@@ -523,7 +546,9 @@ export function applyBattleResultToBot(
   }
   state.money += income;
 
-  console.log(`[Bot ${state.playerName}] Battle result: ${won ? 'WIN' : 'LOSE'}, HP: ${state.hp}, Money: ${state.money}`);
+  console.log(
+    `[Bot ${state.playerName}] Battle result: ${won ? 'WIN' : 'LOSE'}, HP: ${state.hp}, Money: ${state.money}`
+  );
 }
 
 // Cleanup bots for a match
@@ -535,7 +560,7 @@ export function cleanupBots(matchId: string): void {
       botModels.delete(botId);
     }
   }
-  
+
   botMemoryStates.delete(matchId);
   botShops.delete(matchId);
   console.log(`[Bot] Cleaned up bots for match ${matchId}`);
@@ -555,16 +580,21 @@ export async function initializeAndSubscribeBots(
   for (const bot of botPlayers) {
     initializeBot(matchId, bot);
     await subscribeBotToMatch(matchId, bot.id);
-    
+
     // Bots will make AI decision and then become ready
     // Trigger initial decision for first round
     console.log(`[Bot ${bot.id}] Starting initial AI decision for turn 0`);
     // Small delay before first decision
-    setTimeout(() => {
-      runBotAIDecision(matchId, bot.id);
-    }, 2000 + Math.random() * 3000);
+    setTimeout(
+      () => {
+        runBotAIDecision(matchId, bot.id);
+      },
+      2000 + Math.random() * 3000
+    );
   }
-  console.log(`[Bot] Initialized ${botPlayers.length} bots for match ${matchId} (will decide via AI)`);
+  console.log(
+    `[Bot] Initialized ${botPlayers.length} bots for match ${matchId} (will decide via AI)`
+  );
 }
 
 // Get the AI model assigned to a specific bot

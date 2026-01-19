@@ -22,12 +22,12 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    
+
     if (isOpen) {
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
     }
-    
+
     return () => {
       document.removeEventListener('keydown', handleEscape);
       document.body.style.overflow = 'unset';
@@ -46,7 +46,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
             onClick={onClose}
           />
-          
+
           {/* Modal */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -71,11 +71,9 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
                 </button>
               </div>
             )}
-            
+
             {/* Content */}
-            <div className="p-6">
-              {children}
-            </div>
+            <div className="p-6">{children}</div>
           </motion.div>
         </div>
       )}
@@ -84,4 +82,3 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
 }
 
 export default Modal;
-

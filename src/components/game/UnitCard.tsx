@@ -124,10 +124,8 @@ export function UnitCard({
 
       {/* Bottom Info Bar */}
       <div className="absolute bottom-0 left-0 right-0 bg-black/70 px-1 py-0.5">
-        <div className="text-[8px] font-bold text-center text-white truncate">
-          {def.name}
-        </div>
-        
+        <div className="text-[8px] font-bold text-center text-white truncate">{def.name}</div>
+
         {/* Stats (for larger sizes) */}
         {size !== 'sm' && piece && (
           <div className="flex justify-center gap-1 text-[7px] text-stone-300">
@@ -163,8 +161,8 @@ export function UnitCard({
               piece.currentHp / piece.maxHp > 0.5
                 ? 'bg-green-500'
                 : piece.currentHp / piece.maxHp > 0.25
-                ? 'bg-yellow-500'
-                : 'bg-red-500'
+                  ? 'bg-yellow-500'
+                  : 'bg-red-500'
             }`}
             style={{ width: `${(piece.currentHp / piece.maxHp) * 100}%` }}
           />
@@ -182,4 +180,3 @@ export function UnitCard({
 }
 
 export default UnitCard;
-

@@ -14,7 +14,7 @@ export function UnitDetailCard({ piece, shopCard, visible }: UnitDetailCardProps
   // Determine what we're showing details for
   const typeId = piece?.typeId || shopCard?.typeId;
   const unitDef = typeId ? UNIT_DEFINITIONS[typeId as UnitTypeId] : null;
-  
+
   // For pieces on board/bench, we use actual stats. For shop cards, use base stats
   const starLevel = piece?.level || 1;
   const hp = piece?.maxHp || unitDef?.baseHp || 0;
@@ -23,7 +23,7 @@ export function UnitDetailCard({ piece, shopCard, visible }: UnitDetailCardProps
   const attackMax = piece?.attackMax || unitDef?.baseAttackMax || 0;
   const speed = piece?.speed || unitDef?.baseSpeed || 0;
   const range = piece?.range || unitDef?.baseRange || 0;
-  
+
   // Traits from piece or shopCard
   const traits = piece?.traits || shopCard?.traits || [];
 
@@ -42,11 +42,7 @@ export function UnitDetailCard({ piece, shopCard, visible }: UnitDetailCardProps
           {/* Header with image */}
           <div className="relative h-24 bg-gradient-to-br from-stone-800 to-stone-900 p-3 flex items-center gap-3">
             <div className="w-16 h-16 bg-stone-700 rounded-lg flex items-center justify-center flex-shrink-0 border border-stone-600">
-              <img 
-                src={unitDef.imageUrl} 
-                alt={unitDef.name}
-                className="w-14 h-14 object-contain"
-              />
+              <img src={unitDef.imageUrl} alt={unitDef.name} className="w-14 h-14 object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -60,11 +56,15 @@ export function UnitDetailCard({ piece, shopCard, visible }: UnitDetailCardProps
                 <span className="bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded text-xs font-bold">
                   Cost: {unitDef.cost}
                 </span>
-                {unitDef.traits && unitDef.traits.map((trait, i) => (
-                  <span key={i} className="bg-stone-600 text-stone-200 px-1.5 py-0.5 rounded text-xs capitalize">
-                    {trait}
-                  </span>
-                ))}
+                {unitDef.traits &&
+                  unitDef.traits.map((trait, i) => (
+                    <span
+                      key={i}
+                      className="bg-stone-600 text-stone-200 px-1.5 py-0.5 rounded text-xs capitalize"
+                    >
+                      {trait}
+                    </span>
+                  ))}
               </div>
             </div>
           </div>
@@ -74,7 +74,12 @@ export function UnitDetailCard({ piece, shopCard, visible }: UnitDetailCardProps
             <div className="grid grid-cols-3 gap-2">
               <StatBox icon={Heart} label="HP" value={hp} color="text-red-400" />
               <StatBox icon={Shield} label="DEF" value={defense} color="text-blue-400" />
-              <StatBox icon={Sword} label="ATK" value={`${attackMin}-${attackMax}`} color="text-orange-400" />
+              <StatBox
+                icon={Sword}
+                label="ATK"
+                value={`${attackMin}-${attackMax}`}
+                color="text-orange-400"
+              />
               <StatBox icon={Zap} label="SPD" value={speed} color="text-yellow-400" />
               <StatBox icon={Target} label="RNG" value={range} color="text-green-400" />
               <StatBox icon={Footprints} label="MOV" value={speed} color="text-purple-400" />
@@ -84,12 +89,17 @@ export function UnitDetailCard({ piece, shopCard, visible }: UnitDetailCardProps
           {/* Traits Section */}
           {traits.length > 0 && (
             <div className="px-3 pb-3">
-              <h5 className="text-xs font-bold text-stone-500 mb-1.5 uppercase tracking-wide">Special Traits</h5>
+              <h5 className="text-xs font-bold text-stone-500 mb-1.5 uppercase tracking-wide">
+                Special Traits
+              </h5>
               <div className="space-y-1.5">
                 {traits.map((trait, i) => {
                   const traitDef = TRAIT_DEFINITIONS[trait.traitId];
                   return (
-                    <div key={i} className="bg-purple-900/30 border border-purple-500/20 rounded-lg px-2 py-1.5">
+                    <div
+                      key={i}
+                      className="bg-purple-900/30 border border-purple-500/20 rounded-lg px-2 py-1.5"
+                    >
                       <div className="flex items-center justify-between">
                         <span className="text-purple-300 text-xs font-bold">
                           {traitDef?.name || trait.traitId}
@@ -117,15 +127,15 @@ export function UnitDetailCard({ piece, shopCard, visible }: UnitDetailCardProps
 }
 
 // Helper component for stat boxes
-function StatBox({ 
-  icon: Icon, 
-  label, 
-  value, 
-  color 
-}: { 
-  icon: typeof Heart; 
-  label: string; 
-  value: number | string; 
+function StatBox({
+  icon: Icon,
+  label,
+  value,
+  color,
+}: {
+  icon: typeof Heart;
+  label: string;
+  value: number | string;
   color: string;
 }) {
   return (
@@ -140,4 +150,3 @@ function StatBox({
 }
 
 export default UnitDetailCard;
-

@@ -9,7 +9,7 @@ import { MAX_PLAYERS, STARTING_HP, STARTING_MONEY } from '../types';
 // Create a new match
 export async function createMatch(creatorId: string, creatorName: string) {
   const matchId = uuidv4();
-  
+
   const { data: match, error: matchError } = await insforge.database
     .from('matches')
     .insert({
@@ -50,8 +50,8 @@ export async function joinMatch(matchId: string, playerId: string, playerName: s
 
 // Add a player (human or bot) to match
 export async function addPlayerToMatch(
-  matchId: string, 
-  playerId: string, 
+  matchId: string,
+  playerId: string,
   playerName: string,
   isBot: boolean
 ) {
@@ -66,13 +66,11 @@ export async function addPlayerToMatch(
     // Create the player if they don't exist
     // Use a unique username by appending part of the playerId
     const uniqueUsername = `${playerName}#${playerId.slice(0, 8)}`;
-    const { error: createError } = await insforge.database
-      .from('players')
-      .insert({
-        id: playerId,
-        username: uniqueUsername,
-      });
-    
+    const { error: createError } = await insforge.database.from('players').insert({
+      id: playerId,
+      username: uniqueUsername,
+    });
+
     if (createError) {
       console.error('Failed to create player:', createError);
       throw createError;
@@ -80,44 +78,38 @@ export async function addPlayerToMatch(
   }
 
   // Create match_player entry
-  const { error: playerError } = await insforge.database
-    .from('match_players')
-    .insert({
-      match_id: matchId,
-      player_id: playerId,
-      player_name: playerName,
-      hp: STARTING_HP,
-      money: STARTING_MONEY,
-      level: 1,
-      is_ready: false,
-      is_bot: isBot,
-      is_alive: true,
-    });
+  const { error: playerError } = await insforge.database.from('match_players').insert({
+    match_id: matchId,
+    player_id: playerId,
+    player_name: playerName,
+    hp: STARTING_HP,
+    money: STARTING_MONEY,
+    level: 1,
+    is_ready: false,
+    is_bot: isBot,
+    is_alive: true,
+  });
 
   if (playerError) throw playerError;
 
   // Create board state
-  const { error: boardError } = await insforge.database
-    .from('boards')
-    .insert({
-      match_id: matchId,
-      player_id: playerId,
-      board_state: {},
-      bench_state: [],
-      active_synergies: [],
-    });
+  const { error: boardError } = await insforge.database.from('boards').insert({
+    match_id: matchId,
+    player_id: playerId,
+    board_state: {},
+    bench_state: [],
+    active_synergies: [],
+  });
 
   if (boardError) throw boardError;
 
   // Create shop state
-  const { error: shopError } = await insforge.database
-    .from('shop_cards')
-    .insert({
-      match_id: matchId,
-      player_id: playerId,
-      cards: [],
-      refresh_cost: 2,
-    });
+  const { error: shopError } = await insforge.database.from('shop_cards').insert({
+    match_id: matchId,
+    player_id: playerId,
+    cards: [],
+    refresh_cost: 2,
+  });
 
   if (shopError) throw shopError;
 }
@@ -136,11 +128,11 @@ export async function fillWithBots(matchId: string) {
   const botsNeeded = MAX_PLAYERS - currentPlayerCount;
 
   const botNames = ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel'];
-  
+
   for (let i = 0; i < botsNeeded; i++) {
     const botId = uuidv4();
     const botName = `Bot ${botNames[i % botNames.length]}`;
-    
+
     // addPlayerToMatch will create the player if needed
     await addPlayerToMatch(matchId, botId, botName, true);
   }
@@ -175,10 +167,7 @@ export async function updateMatchStatus(matchId: string, status: string, phase?:
   const updates: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
   if (phase) updates.phase = phase;
 
-  const { error } = await insforge.database
-    .from('matches')
-    .update(updates)
-    .eq('match_id', matchId);
+  const { error } = await insforge.database.from('matches').update(updates).eq('match_id', matchId);
 
   if (error) throw error;
 }
@@ -252,7 +241,7 @@ export async function updatePlayerStats(
     is_alive: hp > 0,
     updated_at: new Date().toISOString(),
   };
-  
+
   if (lastOpponentId) {
     updates.last_opponent_id = lastOpponentId;
   }
@@ -324,18 +313,20 @@ export async function getPlayerBoard(matchId: string, playerId: string) {
 }
 
 // Get all player boards for a match
-export async function getPlayerBoards(matchId: string): Promise<Array<{
-  playerId: string;
-  boardState: Record<string, unknown>;
-  benchState: unknown[];
-}>> {
+export async function getPlayerBoards(matchId: string): Promise<
+  Array<{
+    playerId: string;
+    boardState: Record<string, unknown>;
+    benchState: unknown[];
+  }>
+> {
   const { data, error } = await insforge.database
     .from('boards')
     .select('player_id, board_state, bench_state')
     .eq('match_id', matchId);
 
   if (error) throw error;
-  
+
   return (data || []).map(row => ({
     playerId: row.player_id,
     boardState: row.board_state || {},
@@ -407,4 +398,3 @@ export async function updatePlayerState(
 
   if (error) throw error;
 }
-

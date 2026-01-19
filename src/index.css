@@ -44,7 +44,8 @@ body {
 
 /* Animations */
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -53,11 +54,14 @@ body {
 }
 
 @keyframes glow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 5px theme('colors.amber.500/30');
   }
   50% {
-    box-shadow: 0 0 20px theme('colors.amber.500/50'), 0 0 30px theme('colors.amber.500/30');
+    box-shadow:
+      0 0 20px theme('colors.amber.500/50'),
+      0 0 30px theme('colors.amber.500/30');
   }
 }
 
@@ -72,11 +76,13 @@ body {
 /* Custom utilities */
 @layer utilities {
   .text-shadow-glow {
-    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+    text-shadow:
+      0 0 10px currentColor,
+      0 0 20px currentColor;
   }
-  
+
   .bg-grid-pattern {
-    background-image: 
+    background-image:
       linear-gradient(to right, rgba(68, 64, 60, 0.1) 1px, transparent 1px),
       linear-gradient(to bottom, rgba(68, 64, 60, 0.1) 1px, transparent 1px);
     background-size: 40px 40px;
@@ -85,7 +91,9 @@ body {
 
 /* Card hover effect */
 .card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .card-hover:hover {
@@ -146,7 +154,8 @@ body {
 }
 
 @keyframes damageShake {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateX(0);
   }
   25% {

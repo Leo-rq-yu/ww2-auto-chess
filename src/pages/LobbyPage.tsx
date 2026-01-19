@@ -3,18 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { v4 as uuidv4 } from 'uuid';
 import { Button, Card } from '../components/ui';
-import { 
-  Users, 
-  Plus, 
-  Play, 
-  RefreshCw, 
-  Trophy,
-  Sword,
-  Shield,
-  Target,
-  Plane
-} from 'lucide-react';
-import { createMatch, joinMatch, getWaitingMatches, fillWithBots, getMatch } from '../services/matchService';
+import { Users, Plus, Play, RefreshCw, Trophy, Sword, Shield, Target, Plane } from 'lucide-react';
+import {
+  createMatch,
+  joinMatch,
+  getWaitingMatches,
+  fillWithBots,
+  getMatch,
+} from '../services/matchService';
 import { insforge } from '../services';
 import botService from '../services/botService';
 import useGameStore from '../store/gameStore';
@@ -23,9 +19,17 @@ import useGameStore from '../store/gameStore';
 export function LobbyPage() {
   const navigate = useNavigate();
   const { setUser, setMatch } = useGameStore();
-  
+
   const [playerName, setPlayerName] = useState('');
-  const [matches, setMatches] = useState<any[]>([]);
+  const [matches, setMatches] = useState<
+    Array<{
+      match_id: string;
+      status: string;
+      player_count: number;
+      max_players: number;
+      created_at: string;
+    }>
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,15 +61,13 @@ export function LobbyPage() {
       // Create or get player
       const playerId = uuidv4();
       const uniqueUsername = `${playerName}#${playerId.slice(0, 4)}`;
-      
+
       // Try to create player in database
-      await insforge.database
-        .from('players')
-        .insert({ id: playerId, username: uniqueUsername });
+      await insforge.database.from('players').insert({ id: playerId, username: uniqueUsername });
 
       // Create match
       const match = await createMatch(playerId, playerName);
-      
+
       // Set local state
       setUser(playerId, playerName);
       setMatch({
@@ -81,8 +83,8 @@ export function LobbyPage() {
 
       // Navigate to game
       navigate(`/game/${match.match_id}`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to create room');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create room');
     } finally {
       setIsCreating(false);
     }
@@ -100,15 +102,13 @@ export function LobbyPage() {
     try {
       const playerId = uuidv4();
       const uniqueUsername = `${playerName}#${playerId.slice(0, 4)}`;
-      
+
       // Create player
-      await insforge.database
-        .from('players')
-        .insert({ id: playerId, username: uniqueUsername });
+      await insforge.database.from('players').insert({ id: playerId, username: uniqueUsername });
 
       // Join match
       const match = await joinMatch(matchId, playerId, playerName);
-      
+
       setUser(playerId, playerName);
       setMatch({
         matchId: match.match_id,
@@ -122,8 +122,8 @@ export function LobbyPage() {
       });
 
       navigate(`/game/${matchId}`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to join room');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to join room');
     } finally {
       setIsLoading(false);
     }
@@ -142,22 +142,20 @@ export function LobbyPage() {
       const playerId = uuidv4();
       // Generate a unique username by appending a random suffix
       const uniqueUsername = `${playerName}#${playerId.slice(0, 4)}`;
-      
-      await insforge.database
-        .from('players')
-        .insert({ id: playerId, username: uniqueUsername });
+
+      await insforge.database.from('players').insert({ id: playerId, username: uniqueUsername });
 
       // Create match
       const match = await createMatch(playerId, playerName);
-      
+
       // Fill with bots immediately
       await fillWithBots(match.match_id);
-      
+
       // Fetch full match data to get bot players
       const fullMatch = await getMatch(match.match_id);
-      
+
       // Initialize bot states
-      const botPlayers = fullMatch.match_players.filter((p: any) => p.is_bot);
+      const botPlayers = fullMatch.match_players.filter((p: { is_bot: boolean }) => p.is_bot);
       for (const bot of botPlayers) {
         botService.initializeBot(match.match_id, {
           id: bot.player_id,
@@ -175,7 +173,7 @@ export function LobbyPage() {
           lastOpponentId: null,
         });
       }
-      
+
       setUser(playerId, playerName);
       setMatch({
         matchId: match.match_id,
@@ -189,8 +187,8 @@ export function LobbyPage() {
       });
 
       navigate(`/game/${match.match_id}`);
-    } catch (err: any) {
-      setError(err.message || 'Quick start failed');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Quick start failed');
     } finally {
       setIsLoading(false);
     }
@@ -216,10 +214,8 @@ export function LobbyPage() {
               WW2 Auto-Chess
             </span>
           </h1>
-          <p className="text-stone-400 text-lg">
-            Strategic Battle Royale
-          </p>
-          
+          <p className="text-stone-400 text-lg">Strategic Battle Royale</p>
+
           {/* Unit Icons */}
           <div className="flex justify-center gap-4 mt-6">
             {[Sword, Shield, Target, Plane].map((Icon, i) => (
@@ -246,14 +242,14 @@ export function LobbyPage() {
           >
             <Card variant="elevated" className="p-6">
               <h2 className="text-xl font-bold text-amber-400 mb-4">Player Setup</h2>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm text-stone-400 mb-2">Player Name</label>
                   <input
                     type="text"
                     value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
+                    onChange={e => setPlayerName(e.target.value)}
                     placeholder="Enter your name..."
                     className="w-full px-4 py-3 bg-stone-900 border-2 border-stone-700 rounded-lg
                       text-white placeholder-stone-500 focus:border-amber-500 focus:outline-none
@@ -305,11 +301,7 @@ export function LobbyPage() {
                   <Users size={20} />
                   Available Rooms
                 </h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={loadMatches}
-                >
+                <Button variant="ghost" size="sm" onClick={loadMatches}>
                   <RefreshCw size={14} />
                 </Button>
               </div>
@@ -322,7 +314,7 @@ export function LobbyPage() {
                     <p className="text-sm mt-1">Create a new room to start!</p>
                   </div>
                 ) : (
-                  matches.map((match) => (
+                  matches.map(match => (
                     <motion.div
                       key={match.match_id}
                       initial={{ opacity: 0, y: 10 }}
@@ -335,13 +327,10 @@ export function LobbyPage() {
                           Room #{match.match_id.slice(0, 8)}
                         </div>
                         <div className="text-sm text-stone-500">
-                          {match.match_players?.[0]?.count || 1}/8 Players
+                          {match.player_count || 1}/{match.max_players || 8} Players
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        onClick={() => handleJoinMatch(match.match_id)}
-                      >
+                      <Button size="sm" onClick={() => handleJoinMatch(match.match_id)}>
                         Join
                       </Button>
                     </motion.div>
@@ -367,11 +356,17 @@ export function LobbyPage() {
             <div className="grid md:grid-cols-3 gap-4 text-sm text-stone-400">
               <div>
                 <h4 className="font-semibold text-stone-200 mb-2">🎮 Game Rules</h4>
-                <p>8 players battle in auto-chess style. Each turn you're matched against an opponent. Last one standing wins!</p>
+                <p>
+                  8 players battle in auto-chess style. Each turn you're matched against an
+                  opponent. Last one standing wins!
+                </p>
               </div>
               <div>
                 <h4 className="font-semibold text-stone-200 mb-2">⚔️ Unit Types</h4>
-                <p>7 unique units: Infantry, Engineer, Armored Car, Tank, Artillery, Anti-Air, and Aircraft.</p>
+                <p>
+                  7 unique units: Infantry, Engineer, Armored Car, Tank, Artillery, Anti-Air, and
+                  Aircraft.
+                </p>
               </div>
               <div>
                 <h4 className="font-semibold text-stone-200 mb-2">⭐ Star Upgrades</h4>
