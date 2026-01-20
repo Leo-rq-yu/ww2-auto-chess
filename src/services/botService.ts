@@ -1,5 +1,4 @@
 import insforge from './insforge';
-import { realtimeService } from './realtimeService';
 import { updateBoardState } from './matchService';
 import { Player, Piece, BoardState, ShopCard, UnitTypeId } from '../types';
 import { UNIT_DEFINITIONS } from '../types/units';
@@ -139,75 +138,103 @@ export function getBotMemoryState(matchId: string, botId: string): BotMemoryStat
   return botMemoryStates.get(matchId)?.get(botId);
 }
 
+// Track which turn each bot has made a decision for (to prevent duplicates)
+const botDecisionTurns = new Map<string, Map<string, number>>();
+
 // Subscribe bot to match events via Realtime
 export async function subscribeBotToMatch(matchId: string, botId: string): Promise<void> {
-  // Ensure we're subscribed to the match channel first (so we can publish)
-  await realtimeService.subscribeToMatch(matchId, () => {
-    // Empty handler - we just need to ensure the channel subscription exists
-  });
+  // Initialize decision tracking for this match
+  if (!botDecisionTurns.has(matchId)) {
+    botDecisionTurns.set(matchId, new Map());
+  }
+  // Set to -1 so turn 0 will be processed
+  botDecisionTurns.get(matchId)!.set(botId, -1);
 
-  // Subscribe to preparation phase start
-  realtimeService.onPhaseChange(matchId, async (phase, turnNumber) => {
-    if (phase === 'preparation') {
-      console.log(`[Bot ${botId}] Preparation phase started, turn ${turnNumber}`);
-      // Small delay to simulate thinking
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      await runBotAIDecision(matchId, botId);
-    }
-  });
+  // Note: We don't call subscribeToMatch here - the human player's component already subscribes
+  // and that's sufficient for bots to publish. Calling it here would register duplicate handlers.
 
-  console.log(`[Bot ${botId}] Subscribed to match ${matchId}`);
+  console.log(`[Bot ${botId}] Registered for match ${matchId}`);
 }
 
-// Run AI decision for a bot
-export async function runBotAIDecision(matchId: string, botId: string): Promise<void> {
+// Run AI decision for a bot - with turn tracking to prevent duplicates
+export async function runBotAIDecision(matchId: string, botId: string, turnNumber?: number): Promise<void> {
   const botState = getBotMemoryState(matchId, botId);
   if (!botState || !botState.isAlive) {
-    console.log(`[Bot ${botId}] Bot is dead or not found, skipping`);
+    console.log(`[Bot ${botState?.playerName || botId}] Bot is dead or not found, skipping`);
     return;
   }
 
-  try {
-    // Build game state context for AI
-    const gameContext = buildGameContext(matchId, botId);
+  // Check if we've already made a decision for this turn
+  const matchDecisions = botDecisionTurns.get(matchId);
+  const lastDecisionTurn = matchDecisions?.get(botId) ?? -1;
+  const currentTurn = turnNumber ?? 0;
+  
+  if (lastDecisionTurn >= currentTurn) {
+    console.log(`[Bot ${botState.playerName}] Already made decision for turn ${currentTurn}, skipping`);
+    return;
+  }
 
-    // Get the model assigned to this bot
-    const model = getModelForBot(botId);
-    console.log(`[Bot ${botState.playerName}] Calling AI (${model}) for decision...`);
+  // Mark this turn as decided BEFORE making the call (prevents race conditions)
+  matchDecisions?.set(botId, currentTurn);
 
-    // Call InsForge AI Gateway with the bot's assigned model
-    const completion = await insforge.ai.chat.completions.create({
-      model: model,
-      messages: [
-        { role: 'system', content: BOT_SYSTEM_PROMPT },
-        { role: 'user', content: JSON.stringify(gameContext, null, 2) },
-      ],
-      temperature: 0.7,
-    });
+  let retryCount = 0;
+  const maxRetries = 1;
 
-    const aiResponse = completion.choices[0]?.message?.content;
-    if (!aiResponse) {
-      console.error(`[Bot ${botState.playerName}] AI returned empty response`);
-      await publishBotReady(matchId, botId);
+  while (retryCount <= maxRetries) {
+    try {
+      // Build game state context for AI
+      const gameContext = buildGameContext(matchId, botId);
+
+      // Get the model assigned to this bot
+      const model = getModelForBot(botId);
+      console.log(`[Bot ${botState.playerName}] Calling AI (${model}) for turn ${currentTurn}...`);
+
+      // Call InsForge AI Gateway with the bot's assigned model
+      const completion = await insforge.ai.chat.completions.create({
+        model: model,
+        messages: [
+          { role: 'system', content: BOT_SYSTEM_PROMPT },
+          { role: 'user', content: JSON.stringify(gameContext, null, 2) },
+        ],
+        temperature: 0.7,
+      });
+
+      const aiResponse = completion.choices[0]?.message?.content;
+      if (!aiResponse) {
+        console.error(`[Bot ${botState.playerName}] AI returned empty response`);
+        await publishBotReady(matchId, botId);
+        return;
+      }
+
+      console.log(`[Bot ${botState.playerName}] AI response:`, aiResponse.slice(0, 200) + '...');
+
+      // Parse AI decision
+      const decision = parseAIDecision(aiResponse);
+      console.log(`[Bot ${botState.playerName}] Decision: ${decision.reasoning}`);
+
+      // Execute actions via Realtime
+      for (const action of decision.actions) {
+        await executeActionViaRealtime(matchId, botId, action);
+        // Small delay between actions
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      // Success - exit the retry loop
       return;
+    } catch (error) {
+      retryCount++;
+      console.error(`[Bot ${botState.playerName}] AI decision error (attempt ${retryCount}):`, error);
+      
+      if (retryCount > maxRetries) {
+        console.log(`[Bot ${botState.playerName}] Max retries reached, marking as ready`);
+        // Fallback: just mark as ready
+        await publishBotReady(matchId, botId);
+        return;
+      }
+      
+      // Wait before retry
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
-
-    console.log(`[Bot ${botState.playerName}] AI response:`, aiResponse);
-
-    // Parse AI decision
-    const decision = parseAIDecision(aiResponse);
-    console.log(`[Bot ${botState.playerName}] Decision: ${decision.reasoning}`);
-
-    // Execute actions via Realtime
-    for (const action of decision.actions) {
-      await executeActionViaRealtime(matchId, botId, action);
-      // Small delay between actions
-      await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 500));
-    }
-  } catch (error) {
-    console.error(`[Bot ${botState.playerName}] AI decision error:`, error);
-    // Fallback: just mark as ready
-    await publishBotReady(matchId, botId);
   }
 }
 
@@ -568,6 +595,7 @@ export function cleanupBots(matchId: string): void {
 
   botMemoryStates.delete(matchId);
   botShops.delete(matchId);
+  botDecisionTurns.delete(matchId);
   console.log(`[Bot] Cleaned up bots for match ${matchId}`);
 }
 
@@ -575,6 +603,32 @@ export function cleanupBots(matchId: string): void {
 export function getBotIds(matchId: string): string[] {
   const bots = botMemoryStates.get(matchId);
   return bots ? Array.from(bots.keys()) : [];
+}
+
+// Handle phase change for all bots in a match
+export async function handlePhaseChangeForBots(
+  matchId: string,
+  phase: string,
+  turnNumber: number
+): Promise<void> {
+  if (phase !== 'preparation') return;
+
+  const bots = botMemoryStates.get(matchId);
+  if (!bots) return;
+
+  console.log(`[Bot] Phase change to preparation, turn ${turnNumber}, notifying ${bots.size} bots`);
+
+  // Stagger bot decisions to avoid overwhelming the AI gateway
+  let delay = 500;
+  for (const [botId, botState] of bots.entries()) {
+    if (!botState.isAlive) continue;
+
+    setTimeout(() => {
+      runBotAIDecision(matchId, botId, turnNumber);
+    }, delay);
+    
+    delay += 500 + Math.random() * 1000;
+  }
 }
 
 // Initialize all bots for a match and subscribe them
@@ -585,21 +639,20 @@ export async function initializeAndSubscribeBots(
   for (const bot of botPlayers) {
     initializeBot(matchId, bot);
     await subscribeBotToMatch(matchId, bot.id);
-
-    // Bots will make AI decision and then become ready
-    // Trigger initial decision for first round
-    console.log(`[Bot ${bot.id}] Starting initial AI decision for turn 0`);
-    // Small delay before first decision
-    setTimeout(
-      () => {
-        runBotAIDecision(matchId, bot.id);
-      },
-      2000 + Math.random() * 3000
-    );
   }
+
   console.log(
-    `[Bot] Initialized ${botPlayers.length} bots for match ${matchId} (will decide via AI)`
+    `[Bot] Initialized ${botPlayers.length} bots for match ${matchId}`
   );
+
+  // Trigger initial decision for first round (turn 0) with staggered delays
+  let delay = 1500;
+  for (const bot of botPlayers) {
+    setTimeout(() => {
+      runBotAIDecision(matchId, bot.id, 0);
+    }, delay);
+    delay += 500 + Math.random() * 1000;
+  }
 }
 
 // Get the AI model assigned to a specific bot
@@ -623,4 +676,5 @@ export default {
   initializeAndSubscribeBots,
   getBotModel,
   getAvailableModels,
+  handlePhaseChangeForBots,
 };

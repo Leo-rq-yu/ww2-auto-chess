@@ -69,6 +69,7 @@ interface GameState {
   // Shop
   shop: ShopState;
   cardPool: Map<UnitTypeId, number>;
+  isShopLocked: boolean;
 
   // Synergies
   synergies: SynergyProgress[];
@@ -99,6 +100,7 @@ interface GameActions {
   // Shop Actions
   buyCard: (cardIndex: number) => void;
   refreshShop: () => void;
+  toggleShopLock: () => void;
 
   // Board Actions
   selectPiece: (pieceId: string | null) => void;
@@ -151,6 +153,7 @@ const initialState: GameState = {
   selectedPieceId: null,
   shop: { cards: [], refreshCost: 2 },
   cardPool: createCardPool(),
+  isShopLocked: false,
   synergies: [],
   activeSynergies: [],
   battleBoard: null,
@@ -316,6 +319,11 @@ export const useGameStore = create<GameStore>()(
             console.warn('[Store] Failed to sync money to database:', err);
           });
         }
+      }),
+
+    toggleShopLock: () =>
+      set(state => {
+        state.isShopLocked = !state.isShopLocked;
       }),
 
     // Board Actions
@@ -512,8 +520,8 @@ export const useGameStore = create<GameStore>()(
         state.isReady = false;
 
         if (phase === 'preparation') {
-          // Generate new shop
-          if (state.currentPlayer) {
+          // Generate new shop ONLY if not locked
+          if (state.currentPlayer && !state.isShopLocked) {
             state.shop = createShopState(state.currentPlayer.level, state.cardPool);
           }
         }

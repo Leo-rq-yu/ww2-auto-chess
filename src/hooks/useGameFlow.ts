@@ -4,7 +4,7 @@ import { realtimeService } from '../services/realtimeService';
 import { updateMatchPhase, getPlayerBoards, getMatchPlayers } from '../services/matchService';
 import insforge from '../services/insforge';
 import { Player, BoardState, BattleResult, Piece, BASE_INCOME, GamePhase } from '../types';
-import { applyBattleResultToBot, getBotIds } from '../services/botService';
+import { applyBattleResultToBot, getBotIds, handlePhaseChangeForBots } from '../services/botService';
 
 // =============================================
 // Game Flow Hook - Manages game phases and battles
@@ -101,7 +101,6 @@ function createBattleBoardFromTwo(
 export function useGameFlow(matchId: string | null, currentUserId: string | null) {
   const {
     players,
-    turnNumber,
     setPhase,
     setTurnNumber,
     setBattleState,
@@ -260,6 +259,11 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
           setTurnNumber(newTurn);
           setPhase('preparation');
 
+          // CRITICAL: Update database with new turn number to prevent reset from DB events
+          if (battleMatchId) {
+            await updateMatchPhase(battleMatchId, 'preparation', newTurn);
+          }
+
           // Reset ALL players' ready status (both bots and humans)
           readyTrackerRef.current.players.forEach((status, playerId) => {
             status.isReady = false;
@@ -299,7 +303,9 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
     console.log('[GameFlow] Starting battle phase');
 
     // Update match phase (single database call)
-    await updateMatchPhase(matchId, 'battle', turnNumber);
+    // Use store.getState() to get the LATEST turn number, not the potentially stale closure value
+    const currentTurn = useGameStore.getState().turnNumber;
+    await updateMatchPhase(matchId, 'battle', currentTurn);
     setPhase('battle');
 
     // Get players - use store if available, otherwise fetch from database
@@ -416,7 +422,7 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
       console.error('[GameFlow] Failed to fetch player boards or run battle:', err);
       battleStartedRef.current = false;
     }
-  }, [matchId, players, turnNumber, currentUserId, setBattleState, setPhase, runBattleTurnByTurn]);
+  }, [matchId, players, currentUserId, setBattleState, setPhase, runBattleTurnByTurn]);
 
   // Start new preparation phase
   const startPreparationPhase = useCallback(async () => {
@@ -426,7 +432,9 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
     battleStartedRef.current = false;
     battleResultsProcessedRef.current = false;
 
-    const newTurn = turnNumber + 1;
+    // Use store.getState() to get the LATEST turn number, not the potentially stale closure value
+    const currentTurn = useGameStore.getState().turnNumber;
+    const newTurn = currentTurn + 1;
     setTurnNumber(newTurn);
     setPhase('preparation');
     await updateMatchPhase(matchId, 'preparation', newTurn);
@@ -441,7 +449,7 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
 
     // Publish phase change via Realtime
     await realtimeService.publishPhaseChange(matchId, 'preparation', newTurn);
-  }, [matchId, turnNumber, setTurnNumber, setPhase]);
+  }, [matchId, setTurnNumber, setPhase]);
 
   // End battle phase and go to settlement
   const endBattlePhase = useCallback(async () => {
@@ -449,13 +457,15 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
 
     clearBattle();
     setPhase('settlement');
-    await updateMatchPhase(matchId, 'settlement', turnNumber);
+    // Use store.getState() to get the LATEST turn number
+    const currentTurn = useGameStore.getState().turnNumber;
+    await updateMatchPhase(matchId, 'settlement', currentTurn);
 
     // Short settlement phase
     setTimeout(() => {
       startPreparationPhase();
     }, 3000);
-  }, [matchId, turnNumber, clearBattle, setPhase, startPreparationPhase]);
+  }, [matchId, clearBattle, setPhase, startPreparationPhase]);
 
   // Track the matchId that we've subscribed to
   const subscribedMatchIdRef = useRef<string | null>(null);
@@ -525,6 +535,11 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
       console.log('[GameFlow] Phase change:', newPhase, newTurn);
       setPhase(newPhase as GamePhase);
       setTurnNumber(newTurn);
+
+      // Notify bots about phase change so they can make decisions
+      if (newPhase === 'preparation') {
+        handlePhaseChangeForBots(matchId, newPhase, newTurn);
+      }
     });
 
     // Listen for battle results from Edge Function
@@ -572,6 +587,11 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
             const newTurn = useGameStore.getState().turnNumber + 1;
             setTurnNumber(newTurn);
             setPhase('preparation');
+
+            // CRITICAL: Update database with new turn number to prevent reset from DB events
+            if (matchId) {
+              await updateMatchPhase(matchId, 'preparation', newTurn);
+            }
 
             // Reset ALL players' ready status
             readyTrackerRef.current.players.forEach((status, playerId) => {
@@ -631,7 +651,7 @@ export function useGameFlow(matchId: string | null, currentUserId: string | null
 
         players.forEach(player => {
           const isBot = player.name.startsWith('Bot ') || player.isBot;
-          tracker.players.set(player.id, { isReady: isBot, isBot });
+          tracker.players.set(player.id, { isReady: false, isBot });
         });
 
         console.log('[GameFlow] Initialized ready tracker:', {

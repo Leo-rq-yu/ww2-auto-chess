@@ -91,6 +91,7 @@ type BotActionHandler = (botId: string, action: unknown) => void;
 class RealtimeService {
   private connected = false;
   private subscribedChannels: Set<string> = new Set();
+  private handlersRegistered: Set<string> = new Set(); // Track if handlers are registered for a channel
 
   // Event handlers
   private matchHandlers: Map<string, MatchUpdateHandler[]> = new Map();
@@ -154,6 +155,7 @@ class RealtimeService {
     this.playerReadyHandlers.clear();
     this.botActionHandlers.clear();
     this.battleResultsHandlers.clear();
+    this.handlersRegistered.clear();
   }
 
   // ==========================================
@@ -179,6 +181,12 @@ class RealtimeService {
       this.matchHandlers.set(matchId, []);
     }
     this.matchHandlers.get(matchId)!.push(handler);
+
+    // Only register event handlers ONCE per channel to prevent duplicate handling
+    if (this.handlersRegistered.has(channel)) {
+      return;
+    }
+    this.handlersRegistered.add(channel);
 
     // Listen for database-triggered events
     insforge.realtime.on('INSERT_match', (payload: MatchUpdatePayload) => {
@@ -392,52 +400,32 @@ class RealtimeService {
   // Event Subscriptions for Custom Events
   // ==========================================
   onPhaseChange(matchId: string, handler: PhaseChangeHandler) {
-    if (!this.phaseChangeHandlers.has(matchId)) {
-      this.phaseChangeHandlers.set(matchId, []);
-    }
-    this.phaseChangeHandlers.get(matchId)!.push(handler);
+    // Replace existing handlers to ensure we use the latest closure
+    this.phaseChangeHandlers.set(matchId, [handler]);
   }
 
   onAllPlayersReady(matchId: string, handler: AllPlayersReadyHandler) {
-    if (!this.readyHandlers.has(matchId)) {
-      this.readyHandlers.set(matchId, []);
-    }
-    this.readyHandlers.get(matchId)!.push(handler);
+    this.readyHandlers.set(matchId, [handler]);
   }
 
   onBattleStart(matchId: string, handler: BattleStartHandler) {
-    if (!this.battleStartHandlers.has(matchId)) {
-      this.battleStartHandlers.set(matchId, []);
-    }
-    this.battleStartHandlers.get(matchId)!.push(handler);
+    this.battleStartHandlers.set(matchId, [handler]);
   }
 
   onBattleResult(matchId: string, handler: BattleResultHandler) {
-    if (!this.battleResultHandlers.has(matchId)) {
-      this.battleResultHandlers.set(matchId, []);
-    }
-    this.battleResultHandlers.get(matchId)!.push(handler);
+    this.battleResultHandlers.set(matchId, [handler]);
   }
 
   onPlayerReady(matchId: string, handler: PlayerReadyHandler) {
-    if (!this.playerReadyHandlers.has(matchId)) {
-      this.playerReadyHandlers.set(matchId, []);
-    }
-    this.playerReadyHandlers.get(matchId)!.push(handler);
+    this.playerReadyHandlers.set(matchId, [handler]);
   }
 
   onBotAction(matchId: string, handler: BotActionHandler) {
-    if (!this.botActionHandlers.has(matchId)) {
-      this.botActionHandlers.set(matchId, []);
-    }
-    this.botActionHandlers.get(matchId)!.push(handler);
+    this.botActionHandlers.set(matchId, [handler]);
   }
 
   onBattleResults(matchId: string, handler: BattleResultsHandler) {
-    if (!this.battleResultsHandlers.has(matchId)) {
-      this.battleResultsHandlers.set(matchId, []);
-    }
-    this.battleResultsHandlers.get(matchId)!.push(handler);
+    this.battleResultsHandlers.set(matchId, [handler]);
   }
 
   // ==========================================
@@ -520,11 +508,13 @@ class RealtimeService {
     if (this.subscribedChannels.has(matchChannel)) {
       insforge.realtime.unsubscribe(matchChannel);
       this.subscribedChannels.delete(matchChannel);
+      this.handlersRegistered.delete(matchChannel);
     }
 
     if (this.subscribedChannels.has(playersChannel)) {
       insforge.realtime.unsubscribe(playersChannel);
       this.subscribedChannels.delete(playersChannel);
+      this.handlersRegistered.delete(playersChannel);
     }
 
     // Clear handlers

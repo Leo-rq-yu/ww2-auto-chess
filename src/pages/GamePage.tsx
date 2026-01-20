@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import useGameStore from '../store/gameStore';
@@ -69,24 +69,35 @@ export function GamePage() {
     checkAndMerge,
     updatePlayerStats,
     syncFromServer,
+    isShopLocked,
+    toggleShopLock,
   } = useGameStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [isShopLocked, setIsShopLocked] = useState(false);
   const [hoveredPiece, setHoveredPiece] = useState<Piece | null>(null);
+
+  // Track if bots have been initialized (prevent multiple initializations)
+  const botsInitializedRef = useRef(false);
+  const dataLoadedRef = useRef(false);
 
   // Use game flow hook for battle phase management
   useGameFlow(matchId || null, currentUserId);
 
-  // Load game data
+  // Load game data - only once per mount
   useEffect(() => {
     if (!matchId || !currentUserId) {
       navigate('/');
       return;
     }
+
+    // Prevent multiple loads
+    if (dataLoadedRef.current) {
+      return;
+    }
+    dataLoadedRef.current = true;
 
     const loadGameData = async () => {
       try {
@@ -125,24 +136,17 @@ export function GamePage() {
 
         setPlayers(playersList);
 
-        // Initialize shop if needed
-        if (shop.cards.length === 0) {
-          const newShop = createShopState(currentPlayer?.level || 1, cardPool);
-          syncFromServer({ shop: newShop });
-        }
+        // Initialize shop if needed (use level 1 for initial shop)
+        const newShop = createShopState(1, cardPool);
+        syncFromServer({ shop: newShop });
 
-        // Initialize bots with AI and Realtime subscriptions
+        // Initialize bots with AI and Realtime subscriptions (only once!)
         const botPlayers = playersList.filter((p: Player) => p.isBot);
-        if (botPlayers.length > 0) {
+        if (botPlayers.length > 0 && !botsInitializedRef.current) {
+          botsInitializedRef.current = true;
           console.log('[GamePage] Initializing', botPlayers.length, 'AI bots');
           await botService.initializeAndSubscribeBots(match.match_id, botPlayers);
-
-          // Trigger bot AI decisions after a delay (they will use InsForge AI Gateway)
-          setTimeout(async () => {
-            for (const bot of botPlayers) {
-              await botService.runBotAIDecision(match.match_id, bot.id);
-            }
-          }, 2000);
+          // Note: initializeAndSubscribeBots already triggers initial AI decisions
         }
       } catch (error) {
         console.error('Failed to load game:', error);
@@ -179,11 +183,19 @@ export function GamePage() {
 
     loadGameData();
     setupRealtime();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, currentUserId]);
 
+  // Cleanup on unmount only
+  useEffect(() => {
+    const currentMatchId = matchId;
     return () => {
-      realtimeService.unsubscribeFromMatch(matchId);
+      if (currentMatchId) {
+        realtimeService.unsubscribeFromMatch(currentMatchId);
+        botService.cleanupBots(currentMatchId);
+      }
     };
-  }, [matchId, currentUserId, navigate, setMatch, setPlayers, shop.cards.length, currentPlayer?.level, cardPool, syncFromServer, setPhase, setTurnNumber, updatePlayerStats]);
+  }, [matchId]);
 
   // Toggle ready handler - defined early for keyboard shortcut
   const handleToggleReady = useCallback(async () => {
@@ -232,7 +244,7 @@ export function GamePage() {
         }
       }
       if (e.key === 'f' || e.key === 'F') {
-        setIsShopLocked(prev => !prev);
+        toggleShopLock();
       }
       if (e.key === ' ') {
         e.preventDefault();
@@ -242,7 +254,7 @@ export function GamePage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPieceId, isShopLocked, sellPiece, refreshShop, handleToggleReady]);
+  }, [selectedPieceId, isShopLocked, sellPiece, refreshShop, handleToggleReady, toggleShopLock]);
 
   // Auto-merge check
   useEffect(() => {
@@ -293,7 +305,7 @@ export function GamePage() {
   };
 
   const handleToggleShopLock = () => {
-    setIsShopLocked(!isShopLocked);
+    toggleShopLock();
   };
 
   if (isLoading) {
